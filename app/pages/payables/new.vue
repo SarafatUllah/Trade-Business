@@ -40,6 +40,7 @@ const router = useRouter()
 const { data: parties } = await useFetch('/api/parties')
 
 const partyId = ref((route.query.partyId as string) || '')
+const transactionId = (route.query.transactionId as string) || undefined
 const originalAmount = ref<number | null>(null)
 const dueDate = ref('')
 const notes = ref('')
@@ -71,6 +72,7 @@ async function onSubmit() {
         originalAmount: originalAmount.value,
         dueDate: dueDate.value,
         notes: notes.value || undefined,
+        transactionId,
         reminderDaysBefore: reminderDays.value
       }
     })

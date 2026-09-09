@@ -10,7 +10,7 @@
       </select>
     </div>
 
-    <div v-if="pending" class="empty-state">Loading…</div>
+    <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
     <div v-else-if="!data?.length" class="empty-state">Nothing to pay. 🎉</div>
 
     <div class="card list-card">

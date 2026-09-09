@@ -19,6 +19,7 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
   app: {
+    pageTransition: { name: 'page', mode: 'out-in' },
     head: {
       title: 'Trade Business',
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="pending" class="empty-state">Loading…</div>
+  <div v-if="pending"><SkeletonLoader :rows="4" :row-height="90" /></div>
   <div v-else-if="data">
     <section class="hero-grid">
       <div class="hero-tile receivable">

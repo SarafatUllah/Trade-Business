@@ -23,20 +23,24 @@
       </div>
     </div>
 
-    <div v-if="pending" class="empty-state">Loading…</div>
+    <div v-if="pending"><SkeletonLoader :rows="5" :row-height="76" /></div>
     <div v-else-if="!data?.rows?.length" class="empty-state">
       No transactions yet. Tap + to add your first ledger entry.
     </div>
 
     <!-- Mobile: card/list view -->
     <div class="mobile-list">
-      <NuxtLink v-for="row in data?.rows" :key="row.id" :to="`/transactions/${row.id}`" class="ledger-row">
-        <div class="row-main">
+      <NuxtLink v-for="row in data?.rows" :key="row.id" :to="`/transactions/${row.id}`" class="tx-card">
+        <div class="tx-card-header">
           <strong>{{ row.party?.name ?? 'General entry' }}</strong>
-          <small>{{ formatDate(row.date) }} · {{ row.description || 'No description' }}</small>
-          <small class="field-chips">
-            <span v-for="f in visibleFields" :key="f.key">{{ f.label }}: {{ display(row.fields[f.key]) }}</span>
-          </small>
+          <small>{{ formatDate(row.date) }}</small>
+        </div>
+        <p v-if="row.description" class="tx-desc">{{ row.description }}</p>
+        <div v-if="visibleFields.length" class="tx-field-grid">
+          <div v-for="f in visibleFields" :key="f.key" class="tx-field-cell">
+            <span class="tx-field-label">{{ f.label }}</span>
+            <span class="tx-field-value num">{{ display(row.fields[f.key]) }}</span>
+          </div>
         </div>
       </NuxtLink>
     </div>
@@ -114,8 +118,30 @@ function display(v: unknown) {
 .filters { display: flex; gap: 8px; margin-bottom: 12px; }
 .filters input { flex: 1; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 16px; background: white; }
 .filter-panel { margin-bottom: 12px; }
-.mobile-list { display: block; }
-.field-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.mobile-list { display: flex; flex-direction: column; gap: 10px; }
+.tx-card {
+  display: block;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tx-card:active { border-color: var(--ink-900); box-shadow: var(--shadow-card); }
+.tx-card-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.tx-card-header strong { font-size: 15px; }
+.tx-card-header small { color: var(--ink-400); white-space: nowrap; }
+.tx-desc { margin: 0 0 8px; color: var(--ink-700); font-size: 13px; }
+.tx-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.tx-field-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tx-field-label { font-size: 11px; color: var(--ink-400); font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+.tx-field-value { font-size: 14px; color: var(--ink-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .desktop-table { display: none; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
 

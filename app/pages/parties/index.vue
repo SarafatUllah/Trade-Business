@@ -2,7 +2,7 @@
   <div>
     <input v-model="search" type="search" placeholder="Search parties…" class="search-input" />
 
-    <div v-if="pending" class="empty-state">Loading…</div>
+    <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
     <div v-else-if="!filtered.length" class="empty-state">No parties yet. Tap + to add one.</div>
 
     <div class="card list-card">

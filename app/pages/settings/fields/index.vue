@@ -8,17 +8,53 @@
 
     <div class="card list-card">
       <p v-if="!fields.length" class="empty-state">No fields yet for {{ labels[entity].toLowerCase() }}.</p>
-      <div v-for="f in fields" :key="f.id" class="ledger-row">
-        <div class="row-main">
-          <strong>{{ f.label }} <small class="type-tag">{{ f.type }}</small></strong>
-          <small v-if="f.formula" class="formula-text">= {{ f.formula }}</small>
-          <small class="flags">
-            <span v-if="f.showInTable">In table</span>
-            <span v-if="f.showInInvoice">In invoice</span>
-            <span v-if="f.isFilterable">Filterable</span>
-          </small>
+      <div v-for="f in fields" :key="f.id" class="field-row" :class="{ editing: editingId === f.id }">
+        <div class="field-row-top" @click="toggleEdit(f)">
+          <div class="row-main">
+            <strong>{{ f.label }} <small class="type-tag">{{ f.type }}</small></strong>
+            <small v-if="f.formula" class="formula-text">= {{ f.formula }}</small>
+            <small class="flags">
+              <span v-if="f.showInTable" class="flag-pill">In table</span>
+              <span v-if="f.showInInvoice" class="flag-pill">In invoice</span>
+              <span v-if="f.isFilterable" class="flag-pill">Filterable</span>
+            </small>
+          </div>
+          <span class="chevron" :class="{ open: editingId === f.id }">▾</span>
         </div>
-        <button class="btn secondary small" @click="archiveField(f)">Archive</button>
+
+        <div v-if="editingId === f.id" class="field-edit-panel">
+          <div class="field">
+            <label>Label</label>
+            <input v-model="editForm.label" type="text" />
+          </div>
+          <div v-if="f.type === 'FORMULA'" class="field formula-builder">
+            <label>Formula</label>
+            <input v-model="editForm.formula" type="text" />
+            <small>Tap a field to insert it:</small>
+            <div class="chips">
+              <button v-for="k in existingKeys" :key="k" type="button" class="chip" @click="editForm.formula += (editForm.formula ? ' ' : '') + k">{{ k }}</button>
+              <button type="button" class="chip op" @click="editForm.formula += ' + '">+</button>
+              <button type="button" class="chip op" @click="editForm.formula += ' - '">−</button>
+              <button type="button" class="chip op" @click="editForm.formula += ' * '">×</button>
+              <button type="button" class="chip op" @click="editForm.formula += ' / '">÷</button>
+              <button type="button" class="chip op" @click="editForm.formula += '('">(</button>
+              <button type="button" class="chip op" @click="editForm.formula += ')'">)</button>
+            </div>
+          </div>
+          <div v-if="['DROPDOWN', 'STATUS'].includes(f.type)" class="field">
+            <label>Options (comma separated)</label>
+            <input v-model="editOptionsInput" type="text" />
+          </div>
+          <label class="checkbox-row"><input v-model="editForm.showInTable" type="checkbox" /> <span>Show in table</span></label>
+          <label class="checkbox-row"><input v-model="editForm.showInInvoice" type="checkbox" /> <span>Show in invoice</span></label>
+          <label class="checkbox-row"><input v-model="editForm.isFilterable" type="checkbox" /> <span>Usable as filter</span></label>
+          <p v-if="editError" class="error">{{ editError }}</p>
+          <div class="edit-actions">
+            <button class="btn secondary" type="button" @click="editingId = null">Cancel</button>
+            <button class="btn" type="button" :disabled="editSaving" @click="saveEdit(f)">{{ editSaving ? 'Saving…' : 'Save changes' }}</button>
+            <button class="btn danger" type="button" @click="archiveField(f)">Archive</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -92,6 +128,14 @@ const saving = ref(false)
 const error = ref('')
 const optionsInput = ref('')
 
+const editingId = ref<string | null>(null)
+const editForm = reactive<{ label: string; formula: string; showInTable: boolean; showInInvoice: boolean; isFilterable: boolean }>({
+  label: '', formula: '', showInTable: false, showInInvoice: false, isFilterable: false
+})
+const editOptionsInput = ref('')
+const editSaving = ref(false)
+const editError = ref('')
+
 const form = reactive({
   label: '', key: '', type: 'TEXT', formula: '',
   isRequired: false, showInTable: true, showInInvoice: false, isFilterable: false
@@ -101,8 +145,47 @@ const existingKeys = computed(() => fields.value.filter(f => f.type !== 'FORMULA
 
 async function loadFields() {
   fields.value = await $fetch('/api/fields', { query: { entity: entity.value } })
+  editingId.value = null
 }
 await loadFields()
+
+function toggleEdit(f: any) {
+  if (editingId.value === f.id) { editingId.value = null; return }
+  editingId.value = f.id
+  editError.value = ''
+  editForm.label = f.label
+  editForm.formula = f.formula || ''
+  editForm.showInTable = f.showInTable
+  editForm.showInInvoice = f.showInInvoice
+  editForm.isFilterable = f.isFilterable
+  editOptionsInput.value = f.options ? JSON.parse(f.options).map((o: any) => o.label).join(', ') : ''
+}
+
+async function saveEdit(f: any) {
+  editSaving.value = true
+  editError.value = ''
+  try {
+    const options = ['DROPDOWN', 'STATUS'].includes(f.type)
+      ? editOptionsInput.value.split(',').map(s => s.trim()).filter(Boolean).map(v => ({ value: v, label: v }))
+      : undefined
+    await $fetch(`/api/fields/${f.id}`, {
+      method: 'PATCH',
+      body: {
+        label: editForm.label,
+        formula: f.type === 'FORMULA' ? editForm.formula : undefined,
+        showInTable: editForm.showInTable,
+        showInInvoice: editForm.showInInvoice,
+        isFilterable: editForm.isFilterable,
+        options
+      }
+    })
+    await loadFields()
+  } catch (e: any) {
+    editError.value = e?.data?.statusMessage || 'Could not save changes.'
+  } finally {
+    editSaving.value = false
+  }
+}
 
 function autoKey() {
   if (form.key) return
@@ -132,7 +215,7 @@ async function onCreate() {
 }
 
 async function archiveField(f: any) {
-  if (!confirm(`Archive "${f.label}"? It will be hidden from new entries but historical data is kept.`)) return
+  if (!confirm(`Archive "${f.label}"? It will be hidden from new entries but historical data is kept. You can create a new field with the same key afterward.`)) return
   try {
     await $fetch(`/api/fields/${f.id}`, { method: 'PATCH', body: { isArchived: true } })
     await loadFields()
@@ -144,19 +227,32 @@ async function archiveField(f: any) {
 
 <style scoped>
 .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-.tab-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: white; font-weight: 600; font-size: 13px; color: var(--ink-700); }
+.tab-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: white; font-weight: 600; font-size: 13px; color: var(--ink-700); transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .tab-btn.active { background: var(--ink-900); color: white; border-color: var(--ink-900); }
 .list-card { padding: 4px 12px; margin-bottom: 16px; }
-.row-main { display: flex; flex-direction: column; gap: 3px; }
+.field-row { border-bottom: 1px solid var(--line); }
+.field-row:last-child { border-bottom: none; }
+.field-row-top { display: flex; align-items: center; gap: 10px; padding: 14px 4px; cursor: pointer; }
+.field-row.editing .field-row-top { background: var(--paper-100); margin: 0 -4px; padding: 14px 8px; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.row-main { display: flex; flex-direction: column; gap: 3px; flex: 1; }
 .type-tag { color: var(--ink-400); font-weight: 400; }
 .formula-text { font-family: var(--font-num); color: var(--focus); }
-.flags { display: flex; gap: 8px; color: var(--ink-400); }
+.flags { display: flex; gap: 6px; flex-wrap: wrap; }
+.flag-pill { background: var(--paper-100); color: var(--ink-700); padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.chevron { color: var(--ink-400); transition: transform 0.2s; font-size: 14px; }
+.chevron.open { transform: rotate(180deg); }
+.field-edit-panel { padding: 4px 8px 16px; background: var(--paper-100); border-radius: 0 0 var(--radius-sm) var(--radius-sm); margin: 0 -4px 8px; animation: expand 0.15s ease-out; }
+@keyframes expand { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.edit-actions { display: flex; gap: 8px; margin-top: 12px; }
+.edit-actions .btn { flex: 1; }
+.btn.danger { background: var(--overdue-600); }
 .btn.small { padding: 6px 10px; min-height: auto; font-size: 12px; }
 .new-field-form { margin-top: 12px; }
 .formula-builder small { color: var(--ink-400); display: block; margin: 6px 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
+.chip { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; transition: background 0.15s, color 0.15s; }
 .chip.op { background: var(--paper-100); }
+.chip:active { background: var(--ink-900); color: white; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; }
 .checkbox-row input { width: 18px; height: 18px; }
 .error { color: var(--overdue-600); font-size: 14px; margin: 6px 0; }

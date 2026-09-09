@@ -16,7 +16,21 @@
         </div>
         <div v-if="!data.fieldDefs.length" class="empty-state">No custom fields configured yet.</div>
       </div>
-      <button class="btn payable block danger" @click="onArchive">Archive entry</button>
+
+      <div class="bridge-actions">
+        <p class="bridge-hint">
+          Ledger entries and Payable/Receivable records are kept separate on purpose (so historical
+          transaction data is never silently changed by payment activity). To track money owed for
+          this entry, create a linked record:
+        </p>
+        <div class="bridge-buttons">
+          <NuxtLink v-if="data.party" :to="`/receivables/new?partyId=${data.party.id}&transactionId=${data.id}`" class="btn receivable">+ Receivable</NuxtLink>
+          <NuxtLink v-if="data.party" :to="`/payables/new?partyId=${data.party.id}&transactionId=${data.id}`" class="btn payable">+ Payable</NuxtLink>
+        </div>
+        <p v-if="!data.party" class="bridge-hint muted">Assign a party to this entry first to link a payable/receivable.</p>
+      </div>
+
+      <button class="btn secondary block danger" @click="onArchive">Archive entry</button>
     </template>
 
     <form v-else @submit.prevent="onSave">
@@ -29,10 +43,12 @@
         <input v-model="editDescription" type="text" />
       </div>
       <DynamicFieldInput
-        v-for="f in inputFields"
+        v-for="f in data.fieldDefs"
         :key="f.id"
         :field="f"
-        v-model="editValues[f.key]"
+        :model-value="f.type === 'FORMULA' ? undefined : editValues[f.key]"
+        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        @update:model-value="(v) => (editValues[f.key] = v)"
       />
       <button class="btn block" type="submit" :disabled="saving">{{ saving ? 'Saving…' : 'Save changes' }}</button>
     </form>
@@ -51,6 +67,8 @@ const editDate = ref('')
 const editDescription = ref('')
 const editValues = reactive<Record<string, unknown>>({})
 const inputFields = computed(() => (data.value?.fieldDefs ?? []).filter((f: any) => f.type !== 'FORMULA'))
+const fieldDefsRef = computed(() => data.value?.fieldDefs ?? [])
+const liveFormulas = useLiveFormulas(fieldDefsRef, editValues)
 
 watch(data, (val) => {
   if (!val) return
@@ -96,5 +114,10 @@ function display(v: unknown) {
 .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .row:last-child { border-bottom: none; }
 .label { color: var(--ink-400); font-size: 14px; }
+.bridge-actions { margin-bottom: 16px; }
+.bridge-hint { font-size: 13px; color: var(--ink-400); margin: 0 0 10px; line-height: 1.5; }
+.bridge-hint.muted { text-align: center; }
+.bridge-buttons { display: flex; gap: 10px; margin-bottom: 12px; }
+.bridge-buttons .btn { flex: 1; }
 .danger { background: var(--overdue-600); }
 </style>

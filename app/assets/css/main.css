@@ -153,3 +153,36 @@ button {
 @media (min-width: 900px) {
   .container { max-width: 960px; }
 }
+
+/* Page transitions — quick fade+slight-rise so navigation feels
+   intentional rather than an abrupt content swap. */
+.page-enter-active, .page-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.page-enter-from { opacity: 0; transform: translateY(6px); }
+.page-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* Touch feedback — every tappable primitive gives a visible press state,
+   not just a browser default (or nothing). */
+.btn, .chip, .tab, .tab-btn, .ledger-row, .tx-card, .pill {
+  transition: transform 0.1s ease, opacity 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.btn:active, .chip:active, .tx-card:active {
+  transform: scale(0.97);
+}
+a.ledger-row:active, a.tx-card:active {
+  background: var(--paper-100);
+}
+
+/* Simple shimmer skeleton for loading states, used instead of bare
+   "Loading…" text so pages feel like they're doing something. */
+.skeleton {
+  background: linear-gradient(90deg, var(--paper-100) 25%, #e8e4d8 37%, var(--paper-100) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

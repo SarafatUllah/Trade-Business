@@ -18,10 +18,12 @@
       </div>
 
       <DynamicFieldInput
-        v-for="f in inputFields"
+        v-for="f in fields"
         :key="f.id"
         :field="f"
-        v-model="values[f.key]"
+        :model-value="f.type === 'FORMULA' ? undefined : values[f.key]"
+        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        @update:model-value="(v) => (values[f.key] = v)"
       />
 
       <p v-if="error" class="error">{{ error }}</p>
@@ -41,8 +43,22 @@ const saving = ref(false)
 const error = ref('')
 
 const { data: parties } = await useFetch('/api/parties')
-const { data: fields } = await useFetch('/api/fields', { query: { entity: 'TRANSACTION' } })
-const inputFields = computed(() => (fields.value ?? []).filter((f: any) => f.type !== 'FORMULA'))
+const { data: fieldsData } = await useFetch('/api/fields', { query: { entity: 'TRANSACTION' } })
+const fields = computed(() => fieldsData.value ?? [])
+const liveFormulas = useLiveFormulas(fields, values)
+
+// Explicitly seed every input field to a real "empty" value rather than
+// leaving it `undefined` — native <select> elements fall back to
+// displaying their first <option> when bound to undefined, which looked
+// like an unintended default was pre-selected even though nothing was.
+watch(fields, (list) => {
+  for (const f of list) {
+    if (f.type === 'FORMULA') continue
+    if (!(f.key in values)) {
+      values[f.key] = f.type === 'BOOLEAN' ? false : ''
+    }
+  }
+}, { immediate: true })
 
 const router = useRouter()
 
