@@ -2,8 +2,14 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  // This project's pages/components/layouts/etc. live under app/ (the
+  // Nuxt 4-style layout). Nuxt 3.21 does not auto-detect that as the app
+  // root the way Nuxt 4 does, so it must be set explicitly — without this,
+  // Nuxt silently falls back to its built-in welcome page because it never
+  // finds a custom app.vue or any pages.
+  srcDir: 'app/',
   modules: ['@pinia/nuxt'],
-  css: ['./app/assets/css/main.css'],
+  css: ['~/assets/css/main.css'],
   app: {
     head: {
       title: 'Trade Business',
