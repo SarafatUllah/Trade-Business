@@ -179,7 +179,12 @@ function referenceableFields(current: any) {
 }
 
 async function loadFields() {
-  fields.value = await $fetch('/api/fields', { query: { entity: entity.value } })
+  try {
+    fields.value = await $fetch('/api/fields', { query: { entity: entity.value } })
+  } catch (e: any) {
+    if (e?.response?.status === 401) return navigateTo('/login')
+    throw e
+  }
   editingId.value = null
 }
 await loadFields()

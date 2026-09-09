@@ -73,11 +73,16 @@ function toggleColumn(key: string) {
 
 async function loadTransactions() {
   if (!partyId.value) return
-  const res = await $fetch('/api/transactions', {
-    query: { partyId: partyId.value, dateFrom: periodStart.value || undefined, dateTo: periodEnd.value || undefined, pageSize: 100 }
-  })
-  transactions.value = res.rows
-  selectedTxIds.value = res.rows.map((r: any) => r.id)
+  try {
+    const res = await $fetch('/api/transactions', {
+      query: { partyId: partyId.value, dateFrom: periodStart.value || undefined, dateTo: periodEnd.value || undefined, pageSize: 100 }
+    })
+    transactions.value = res.rows
+    selectedTxIds.value = res.rows.map((r: any) => r.id)
+  } catch (e: any) {
+    if (e?.response?.status === 401) return navigateTo('/login')
+    throw e
+  }
 }
 
 if (partyId.value) await loadTransactions()
