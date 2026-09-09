@@ -16,6 +16,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "vercel-build": "prisma generate && prisma db push --accept-data-loss && nuxt build",
     "cron:reminders": "curl -s -X POST -H \"x-cron-secret: $CRON_SECRET\" ${APP_URL:-http://localhost:3000}/api/cron/run-reminders"
   },
   "prisma": {

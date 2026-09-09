@@ -1,17 +1,15 @@
 // Trade Business — Accounting / Ledger / Payable-Receivable / Invoice system
 // Data model notes:
 // - Money is NEVER stored as float. All monetary columns are Decimal.
-// - Local dev uses SQLite (zero-setup). For production, switch the
-//   datasource provider below to "postgresql" and point DATABASE_URL at
-//   your Postgres instance — no other schema changes are required.
-//   See README.md -> "Switching to Postgres for production".
+// - Using Postgres (Neon) via DATABASE_URL. See README.md ->
+//   "Database setup" for local development options.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite" // production: "postgresql"
+  provider = "postgresql" // switched from sqlite for production use with your Neon database
   url      = env("DATABASE_URL")
 }
 

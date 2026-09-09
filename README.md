@@ -40,18 +40,18 @@ npm run dev                       # http://localhost:3000
 
 Demo login after seeding: `owner@example.com` / `password123`.
 
-### Switching to Postgres for production
+### Database setup
 
-SQLite is the local-dev default for a zero-setup `npm run dev`. For
-production:
+This project uses **Postgres** (tested against Neon). Local dev and
+production both point `DATABASE_URL` at a real Postgres instance — there's
+no SQLite fallback, since SQLite's file-based storage doesn't survive on
+serverless hosts like Vercel.
 
-1. In `prisma/schema.prisma`, change `provider = "sqlite"` to
-   `provider = "postgresql"` under `datasource db`.
-2. Set `DATABASE_URL` to your Postgres connection string.
-3. Run `npx prisma migrate deploy`.
-
-No other schema changes are required — every column already uses
-Postgres-safe types (`Decimal` for all money, proper enums, etc.).
+1. Create a free Postgres database (e.g. [neon.tech](https://neon.tech) —
+   sign up, create a project, copy the connection string).
+2. Put it in `.env` as `DATABASE_URL`.
+3. `npx prisma generate && npx prisma migrate dev --name init` to create
+   the schema and commit `prisma/migrations/`.
 
 ---
 
@@ -196,7 +196,7 @@ POST   /api/invoices                  generate (snapshots rows)
 GET    /api/invoices/:id
 GET    /api/invoices/:id/pdf          streamed PDF download
 
-POST   /api/cron/run-reminders        scheduler entrypoint (see below)
+POST   /api/cron/run-reminders        scheduler entrypoint (GET or POST — see below)
 ```
 
 ---
