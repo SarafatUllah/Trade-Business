@@ -1,0 +1,25 @@
+name: Reminder Scheduler (optional)
+
+# This workflow is OFF by default (no schedule) until you fill in secrets.
+# It exists as a ready-made option for triggering the backend reminder
+# engine if your hosting provider doesn't offer its own cron scheduler
+# (Vercel Cron Jobs and most VPS setups can call the same endpoint via
+# crontab instead — see README.md -> "Reminder scheduler").
+#
+# To enable: uncomment the `schedule` trigger below and set these repo
+# secrets: APP_URL (e.g. https://your-app.example.com), CRON_SECRET
+# (must match the CRON_SECRET env var configured on your deployed app).
+
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   - cron: '*/30 * * * *'
+
+jobs:
+  run-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reminder engine
+        run: |
+          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/run-reminders" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

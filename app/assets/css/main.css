@@ -1,0 +1,155 @@
+/* ============================================================
+   Trade Business — design tokens
+   Concept: a digital khata (ledger book). Ruled-line rhythm for lists
+   instead of uniform SaaS cards; ink-navy chrome; amber for what you owe,
+   teal for what's owed to you, so direction is legible at a glance even
+   before reading the number. IBM Plex Sans/Serif carry a Bengali subset,
+   which matters for a Bangladesh-facing trade audience.
+   ============================================================ */
+
+@import url('https://cdnjs.cloudflare.com/ajax/libs/ibm-plex/6.4.0/css/ibm-plex.min.css');
+
+:root {
+  /* Color */
+  --ink-900: #16212B;      /* app chrome / primary text */
+  --ink-700: #33424F;
+  --ink-400: #7C8A96;      /* secondary text */
+  --paper-0: #FBFAF7;      /* page background — warm, not stark white */
+  --paper-100: #F1EEE7;
+  --line: #DFDACE;         /* ledger rule lines */
+
+  --payable-600: #B5651D;  /* amber-brown ink: money you owe */
+  --payable-100: #F6E9DA;
+  --receivable-600: #1F6F5C; /* teal ink: money owed to you */
+  --receivable-100: #E1EFEA;
+  --overdue-600: #B23A2E;  /* distinct red, reserved only for overdue */
+  --overdue-100: #F5E1DE;
+
+  --focus: #2C5AA0;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --shadow-card: 0 1px 2px rgba(22, 33, 43, 0.06), 0 1px 1px rgba(22, 33, 43, 0.04);
+
+  --font-ui: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-num: 'IBM Plex Serif', Georgia, serif;
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background: var(--paper-0);
+  color: var(--ink-900);
+  font-family: var(--font-ui);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-size: 15px;
+  line-height: 1.5;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+h1, h2, h3 { font-family: var(--font-num); font-weight: 600; margin: 0; }
+
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Reusable primitives ---------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--ink-900);
+  color: white;
+  min-height: 44px; /* touch target */
+}
+.btn:active { opacity: 0.85; }
+.btn.secondary { background: var(--paper-100); color: var(--ink-900); border: 1px solid var(--line); }
+.btn.payable { background: var(--payable-600); }
+.btn.receivable { background: var(--receivable-600); }
+.btn.block { width: 100%; }
+
+.card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label { font-size: 13px; color: var(--ink-400); font-weight: 600; }
+.field input, .field select, .field textarea {
+  font-family: var(--font-ui);
+  font-size: 16px; /* prevents iOS auto-zoom on focus */
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper-0);
+  color: var(--ink-900);
+  min-height: 44px;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--focus);
+}
+
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+.pill.payable { background: var(--payable-100); color: var(--payable-600); }
+.pill.receivable { background: var(--receivable-100); color: var(--receivable-600); }
+.pill.overdue { background: var(--overdue-100); color: var(--overdue-600); }
+.pill.neutral { background: var(--paper-100); color: var(--ink-700); }
+
+.ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+}
+.ledger-row.payable { border-left-color: var(--payable-600); }
+.ledger-row.receivable { border-left-color: var(--receivable-600); }
+.ledger-row.overdue { border-left-color: var(--overdue-600); }
+.ledger-row:last-child { border-bottom: none; }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--ink-400);
+}
+
+.container { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+
+@media (min-width: 900px) {
+  .container { max-width: 960px; }
+}

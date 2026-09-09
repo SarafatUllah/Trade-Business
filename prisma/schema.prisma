@@ -1,0 +1,445 @@
+// Trade Business — Accounting / Ledger / Payable-Receivable / Invoice system
+// Data model notes:
+// - Money is NEVER stored as float. All monetary columns are Decimal.
+// - Local dev uses SQLite (zero-setup). For production, switch the
+//   datasource provider below to "postgresql" and point DATABASE_URL at
+//   your Postgres instance — no other schema changes are required.
+//   See README.md -> "Switching to Postgres for production".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // production: "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// IDENTITY / WORKSPACE
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// A Business is the tenant/workspace. Everything financial is scoped to one.
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String   @default("BDT")
+  timezone  String   @default("Asia/Dhaka")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  parties     Party[]
+  fields      FieldDefinition[]
+  transactions Transaction[]
+  payables    Payable[]
+  receivables Receivable[]
+  reminders   Reminder[]
+  notifications Notification[]
+  invoices    Invoice[]
+  auditLogs   AuditLog[]
+
+  @@map("businesses")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  STAFF
+  VIEWER
+}
+
+model Membership {
+  id         String   @id @default(cuid())
+  userId     String
+  businessId String
+  role       Role     @default(STAFF)
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@map("memberships")
+}
+
+// ============================================================
+// PARTY / MILL
+// ============================================================
+
+model Party {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  phone      String?
+  address    String?
+  notes      String?
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  payables     Payable[]
+  receivables  Receivable[]
+  invoices     Invoice[]
+
+  @@index([businessId])
+  @@map("parties")
+}
+
+// ============================================================
+// DYNAMIC FIELD ENGINE
+// ============================================================
+
+enum FieldEntity {
+  TRANSACTION
+  PAYABLE
+  RECEIVABLE
+}
+
+enum FieldType {
+  TEXT
+  LONG_TEXT
+  NUMBER
+  CURRENCY
+  DATE
+  DATETIME
+  DROPDOWN
+  STATUS
+  BOOLEAN
+  FORMULA
+}
+
+// A user-defined column. Core accounting truth (Payable/Receivable/Payment/
+// Collection amounts and dates) is NEVER modeled as a custom field — only
+// supplementary/business-specific columns are (e.g. Truck Number, Weight).
+model FieldDefinition {
+  id           String      @id @default(cuid())
+  businessId   String
+  entity       FieldEntity @default(TRANSACTION)
+  key          String // stable machine key, e.g. "truck_number"
+  label        String // display label, e.g. "Truck Number"
+  type         FieldType
+  options      String? // JSON array of {value,label} for DROPDOWN/STATUS
+  formula      String? // raw formula expression for FORMULA fields
+  isRequired   Boolean     @default(false)
+  showInTable  Boolean     @default(true)
+  showInInvoice Boolean    @default(false)
+  isFilterable Boolean     @default(false)
+  sortOrder    Int         @default(0)
+  isArchived   Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  business Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  values   CustomFieldValue[]
+
+  @@unique([businessId, entity, key])
+  @@index([businessId, entity])
+  @@map("field_definitions")
+}
+
+// EAV value storage for dynamic fields. `recordId` points at the id of the
+// Transaction/Payable/Receivable row identified by `fieldDefinition.entity`.
+// Values are stored typed (stringValue / numberValue / dateValue / boolValue)
+// so numeric/date filtering and sorting can use indexed columns instead of
+// parsing JSON, while still allowing arbitrary user-defined fields.
+model CustomFieldValue {
+  id         String    @id @default(cuid())
+  fieldId    String
+  recordId   String
+  stringValue String?
+  numberValue Decimal?
+  dateValue   DateTime?
+  boolValue   Boolean?
+  updatedAt   DateTime  @updatedAt
+
+  field FieldDefinition @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([fieldId, recordId])
+  @@index([recordId])
+  @@map("custom_field_values")
+}
+
+// ============================================================
+// TRANSACTION (ledger row — the spreadsheet replacement)
+// ============================================================
+
+model Transaction {
+  id         String   @id @default(cuid())
+  businessId String
+  partyId    String?
+  date       DateTime
+  description String?
+  isArchived Boolean  @default(false)
+  createdById String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  party    Party?   @relation(fields: [partyId], references: [id])
+
+  @@index([businessId, date])
+  @@index([partyId])
+  @@map("transactions")
+}
+
+// ============================================================
+// PAYABLE / RECEIVABLE (kept strictly separate — never netted)
+// ============================================================
+
+enum PayableStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+model Payable {
+  id            String        @id @default(cuid())
+  businessId    String
+  partyId       String
+  transactionId String?
+  originalAmount Decimal
+  dueDate       DateTime
+  status        PayableStatus @default(UNPAID)
+  notes         String?
+  isSettled     Boolean       @default(false)
+  isArchived    Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  party    Party     @relation(fields: [partyId], references: [id])
+  payments Payment[]
+  reminders Reminder[]
+  invoiceItems InvoiceItem[]
+
+  @@index([businessId, dueDate])
+  @@index([partyId])
+  @@map("payables")
+}
+
+enum ReceivableStatus {
+  UNRECEIVED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  OVERDUE
+}
+
+model Receivable {
+  id             String           @id @default(cuid())
+  businessId     String
+  partyId        String
+  transactionId  String?
+  originalAmount Decimal
+  expectedDate   DateTime
+  status         ReceivableStatus @default(UNRECEIVED)
+  notes          String?
+  isSettled      Boolean          @default(false)
+  isArchived     Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  party       Party        @relation(fields: [partyId], references: [id])
+  collections Collection[]
+  reminders   Reminder[]
+  invoiceItems InvoiceItem[]
+
+  @@index([businessId, expectedDate])
+  @@index([partyId])
+  @@map("receivables")
+}
+
+// ============================================================
+// PAYMENTS / COLLECTIONS (immutable history)
+// ============================================================
+
+model Payment {
+  id         String   @id @default(cuid())
+  payableId  String
+  amount     Decimal
+  paidAt     DateTime @default(now())
+  method     String?
+  notes      String?
+  createdById String?
+  createdAt  DateTime @default(now())
+  // Reversal pattern instead of destructive edits:
+  reversedAt DateTime?
+  reversalReason String?
+
+  payable Payable @relation(fields: [payableId], references: [id], onDelete: Cascade)
+
+  @@index([payableId])
+  @@map("payments")
+}
+
+model Collection {
+  id           String   @id @default(cuid())
+  receivableId String
+  amount       Decimal
+  receivedAt   DateTime @default(now())
+  method       String?
+  notes        String?
+  createdById  String?
+  createdAt    DateTime @default(now())
+  reversedAt   DateTime?
+  reversalReason String?
+
+  receivable Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+
+  @@index([receivableId])
+  @@map("collections")
+}
+
+// ============================================================
+// REMINDERS / NOTIFICATIONS
+// ============================================================
+
+enum ObligationType {
+  PAYABLE
+  RECEIVABLE
+}
+
+model Reminder {
+  id            String         @id @default(cuid())
+  businessId    String
+  obligationType ObligationType
+  payableId     String?
+  receivableId  String?
+  daysBefore    Int // 0 = same day, negative = days after (overdue nudge)
+  isActive      Boolean        @default(true)
+  lastFiredAt   DateTime?
+  createdAt     DateTime       @default(now())
+
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  payable    Payable?    @relation(fields: [payableId], references: [id], onDelete: Cascade)
+  receivable Receivable? @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@map("reminders")
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  SMS
+  EMAIL
+  WHATSAPP
+}
+
+model Notification {
+  id         String              @id @default(cuid())
+  businessId String
+  userId     String?
+  channel    NotificationChannel @default(IN_APP)
+  title      String
+  body       String
+  data       String? // JSON payload (obligation type/id, deep link)
+  isRead     Boolean             @default(false)
+  sentAt     DateTime?
+  createdAt  DateTime            @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id])
+
+  @@index([businessId, isRead])
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ============================================================
+// INVOICES
+// ============================================================
+
+model Invoice {
+  id          String   @id @default(cuid())
+  businessId  String
+  partyId     String
+  invoiceNumber String
+  periodStart DateTime?
+  periodEnd   DateTime?
+  fieldConfig String // JSON: which dynamic fields/columns appear
+  totalAmount Decimal
+  totalPaid   Decimal  @default(0)
+  totalReceived Decimal @default(0)
+  pdfPath     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  party    Party         @relation(fields: [partyId], references: [id])
+  items    InvoiceItem[]
+
+  @@unique([businessId, invoiceNumber])
+  @@index([partyId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  transactionId String?
+  payableId    String?
+  receivableId String?
+  description  String?
+  amount       Decimal
+  snapshot     String // JSON snapshot of the row's dynamic field values at invoice time
+
+  invoice    Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payable    Payable?    @relation(fields: [payableId], references: [id])
+  receivable Receivable? @relation(fields: [receivableId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String?
+  entity     String // e.g. "Payable", "Payment"
+  entityId   String
+  action     String // CREATE, UPDATE, REVERSE, DELETE
+  before     String? // JSON
+  after      String? // JSON
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id])
+
+  @@index([businessId, entity, entityId])
+  @@map("audit_logs")
+}

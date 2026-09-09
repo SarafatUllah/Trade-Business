@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./ci.db"
+      JWT_SECRET: "ci-test-secret"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply schema to ephemeral test database
+        run: npx prisma db push --skip-generate
+        # Uses `db push` (schema-sync) here since no migration history is
+        # committed yet. Once you run `npm run db:migrate` locally to create
+        # your first migration and commit prisma/migrations/, switch this
+        # step to `npx prisma migrate deploy` for real migration history.
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
