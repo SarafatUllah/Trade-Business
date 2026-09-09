@@ -24,8 +24,8 @@
     </div>
 
     <div v-if="pending"><SkeletonLoader :rows="5" :row-height="76" /></div>
-    <div v-else-if="!data?.rows?.length" class="empty-state">
-      No transactions yet. Tap + to add your first ledger entry.
+    <div v-else-if="!data?.rows?.length">
+      <EmptyState :icon="BookOpen" message="No ledger entries yet" hint="Tap the + button to add your first transaction." />
     </div>
 
     <!-- Mobile: card/list view -->
@@ -71,11 +71,12 @@
       <button class="btn secondary" :disabled="page >= data.pagination.totalPages" @click="page++; reload()">Next</button>
     </div>
 
-    <NuxtLink to="/transactions/new" class="fab" aria-label="Add transaction">+</NuxtLink>
+    <NuxtLink to="/transactions/new" class="fab" aria-label="Add transaction"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import { BookOpen, Plus } from '@lucide/vue'
 const search = ref('')
 const partyId = ref('')
 const dateFrom = ref('')

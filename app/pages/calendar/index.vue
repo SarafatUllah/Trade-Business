@@ -7,7 +7,7 @@
     </div>
 
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
-    <div v-else-if="!data?.events?.length" class="empty-state">Nothing due this month.</div>
+    <div v-else-if="!data?.events?.length"><EmptyState :icon="CalendarCheck2" message="Nothing due this month" hint="Payments and collections will show up here as they're scheduled." /></div>
 
     <div v-for="group in groupedByDay" :key="group.day" class="day-group">
       <div class="day-label">{{ group.label }}</div>
@@ -25,6 +25,7 @@
 </template>
 
 <script setup lang="ts">
+import { CalendarCheck2 } from '@lucide/vue'
 const { format } = useCurrency()
 const cursor = ref(new Date())
 

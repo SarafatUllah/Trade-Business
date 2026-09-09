@@ -1,7 +1,7 @@
 <template>
   <div>
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
-    <div v-else-if="!data?.length" class="empty-state">No invoices yet.</div>
+    <div v-else-if="!data?.length"><EmptyState :icon="FileText" message="No invoices yet" hint="Generate one from a party's page." /></div>
 
     <div class="card list-card">
       <NuxtLink v-for="i in data" :key="i.id" :to="`/invoices/${i.id}`" class="ledger-row">
@@ -18,6 +18,7 @@
 </template>
 
 <script setup lang="ts">
+import { FileText } from '@lucide/vue'
 const { format } = useCurrency()
 const { data, pending } = await useFetch('/api/invoices')
 function formatDate(d: string | Date) {

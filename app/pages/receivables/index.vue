@@ -11,7 +11,7 @@
     </div>
 
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
-    <div v-else-if="!data?.length" class="empty-state">Nothing pending to receive.</div>
+    <div v-else-if="!data?.length"><EmptyState :icon="HandCoins" message="Nothing pending to receive" hint="You're fully collected — nice." /></div>
 
     <div class="card list-card">
       <NuxtLink v-for="r in data" :key="r.id" :to="`/receivables/${r.id}`" class="ledger-row" :class="{ overdue: r.status === 'OVERDUE' }">
@@ -23,11 +23,12 @@
       </NuxtLink>
     </div>
 
-    <NuxtLink to="/receivables/new" class="fab receivable" aria-label="Add receivable">+</NuxtLink>
+    <NuxtLink to="/receivables/new" class="fab receivable" aria-label="Add receivable"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import { HandCoins, Plus } from '@lucide/vue'
 const { format } = useCurrency()
 const statusFilter = ref('')
 const { data, pending } = await useFetch('/api/receivables', { query: computed(() => ({ status: statusFilter.value || undefined })) })

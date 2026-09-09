@@ -5,7 +5,7 @@
     </button>
 
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
-    <div v-else-if="!data?.length" class="empty-state">You're all caught up.</div>
+    <div v-else-if="!data?.length"><EmptyState :icon="BellOff" message="You're all caught up" hint="No new notifications right now." /></div>
 
     <div class="card list-card">
       <div v-for="n in data" :key="n.id" class="ledger-row" :class="{ unread: !n.isRead }" @click="markRead(n)">
@@ -20,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+import { BellOff } from '@lucide/vue'
 const { data, pending, refresh } = await useFetch('/api/notifications')
 
 async function markRead(n: any) {

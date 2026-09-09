@@ -23,8 +23,10 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@lucide/vue": "^1.43.0",
     "@pinia/nuxt": "^1.0.2",
     "@prisma/client": "^5.22.0",
+    "@vue/devtools-api": "^6.6.4",
     "bcryptjs": "^3.0.3",
     "dayjs": "^1.11.23",
     "decimal.js": "^10.6.0",

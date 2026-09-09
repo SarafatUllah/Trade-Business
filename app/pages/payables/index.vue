@@ -11,7 +11,7 @@
     </div>
 
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
-    <div v-else-if="!data?.length" class="empty-state">Nothing to pay. 🎉</div>
+    <div v-else-if="!data?.length"><EmptyState :icon="PartyPopper" message="Nothing to pay right now" hint="You're all settled up." /></div>
 
     <div class="card list-card">
       <NuxtLink v-for="p in data" :key="p.id" :to="`/payables/${p.id}`" class="ledger-row" :class="{ overdue: p.status === 'OVERDUE' }">
@@ -23,11 +23,12 @@
       </NuxtLink>
     </div>
 
-    <NuxtLink to="/payables/new" class="fab payable" aria-label="Add payable">+</NuxtLink>
+    <NuxtLink to="/payables/new" class="fab payable" aria-label="Add payable"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import { PartyPopper, Plus } from '@lucide/vue'
 const { format } = useCurrency()
 const statusFilter = ref('')
 const { data, pending } = await useFetch('/api/payables', { query: computed(() => ({ status: statusFilter.value || undefined })) })

@@ -3,7 +3,7 @@
     <input v-model="search" type="search" placeholder="Search parties…" class="search-input" />
 
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
-    <div v-else-if="!filtered.length" class="empty-state">No parties yet. Tap + to add one.</div>
+    <div v-else-if="!filtered.length"><EmptyState :icon="Factory" message="No parties yet" hint="Tap the + button to add a Mill or trading partner." /></div>
 
     <div class="card list-card">
       <NuxtLink v-for="p in filtered" :key="p.id" :to="`/parties/${p.id}`" class="ledger-row">
@@ -18,11 +18,12 @@
       </NuxtLink>
     </div>
 
-    <NuxtLink to="/parties/new" class="fab" aria-label="Add party">+</NuxtLink>
+    <NuxtLink to="/parties/new" class="fab" aria-label="Add party"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Factory, Plus } from '@lucide/vue'
 const search = ref('')
 const { format } = useCurrency()
 const { data, pending } = await useFetch('/api/parties')

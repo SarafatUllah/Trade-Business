@@ -78,11 +78,12 @@
       </div>
     </div>
 
-    <NuxtLink to="/transactions/new" class="fab" aria-label="Add transaction">+</NuxtLink>
+    <NuxtLink to="/transactions/new" class="fab" aria-label="Add transaction"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Plus } from '@lucide/vue'
 const { format } = useCurrency()
 function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })

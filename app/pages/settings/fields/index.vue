@@ -7,7 +7,7 @@
     </div>
 
     <div class="card list-card">
-      <p v-if="!fields.length" class="empty-state">No fields yet for {{ labels[entity].toLowerCase() }}.</p>
+      <div v-if="!fields.length"><EmptyState :icon="ListPlus" :message="`No fields yet for ${labels[entity].toLowerCase()}`" hint="Tap '+ Add field' below to create your first custom column." /></div>
       <div v-for="f in fields" :key="f.id" class="field-row" :class="{ editing: editingId === f.id }">
         <div class="field-row-top" @click="toggleEdit(f)">
           <div class="row-main">
@@ -145,6 +145,7 @@
 </template>
 
 <script setup lang="ts">
+import { ListPlus } from '@lucide/vue'
 type Entity = 'TRANSACTION' | 'PAYABLE' | 'RECEIVABLE'
 const entities: Entity[] = ['TRANSACTION', 'PAYABLE', 'RECEIVABLE']
 const labels: Record<Entity, string> = { TRANSACTION: 'Ledger', PAYABLE: 'Payable', RECEIVABLE: 'Receivable' }

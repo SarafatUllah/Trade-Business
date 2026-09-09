@@ -1,38 +1,40 @@
 /* ============================================================
-   Trade Business — design tokens
-   Concept: a digital khata (ledger book). Ruled-line rhythm for lists
-   instead of uniform SaaS cards; ink-navy chrome; amber for what you owe,
-   teal for what's owed to you, so direction is legible at a glance even
-   before reading the number. IBM Plex Sans/Serif carry a Bengali subset,
-   which matters for a Bangladesh-facing trade audience.
+   Trade Business — design tokens (v2: modern refresh)
+   Clean, card-based fintech aesthetic: soft neutral surface, vibrant
+   semantic accents (amber = you owe, teal = owed to you, red reserved
+   only for overdue), generous radius/whitespace, Lucide icon system
+   throughout instead of emoji, and real motion on navigation.
    ============================================================ */
 
 @import url('https://cdnjs.cloudflare.com/ajax/libs/ibm-plex/6.4.0/css/ibm-plex.min.css');
 
 :root {
   /* Color */
-  --ink-900: #16212B;      /* app chrome / primary text */
-  --ink-700: #33424F;
-  --ink-400: #7C8A96;      /* secondary text */
-  --paper-0: #FBFAF7;      /* page background — warm, not stark white */
-  --paper-100: #F1EEE7;
-  --line: #DFDACE;         /* ledger rule lines */
+  --ink-900: #14181F;
+  --ink-700: #3A4150;
+  --ink-400: #8891A1;
+  --paper-0: #F6F7FB;
+  --paper-100: #EEF0F6;
+  --line: #E4E7F0;
 
-  --payable-600: #B5651D;  /* amber-brown ink: money you owe */
-  --payable-100: #F6E9DA;
-  --receivable-600: #1F6F5C; /* teal ink: money owed to you */
-  --receivable-100: #E1EFEA;
-  --overdue-600: #B23A2E;  /* distinct red, reserved only for overdue */
-  --overdue-100: #F5E1DE;
+  --payable-600: #D97706;
+  --payable-100: #FDF1DF;
+  --receivable-600: #0F9D74;
+  --receivable-100: #E1F7EF;
+  --overdue-600: #DC3545;
+  --overdue-100: #FCE6E8;
 
-  --focus: #2C5AA0;
+  --focus: #4361EE;
+  --accent: #4361EE;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --shadow-card: 0 1px 2px rgba(22, 33, 43, 0.06), 0 1px 1px rgba(22, 33, 43, 0.04);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --shadow-card: 0 1px 3px rgba(20, 24, 31, 0.06), 0 8px 24px -12px rgba(20, 24, 31, 0.10);
+  --shadow-float: 0 10px 30px -8px rgba(20, 24, 31, 0.28);
 
   --font-ui: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-num: 'IBM Plex Serif', Georgia, serif;
+  --font-num: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 
   color-scheme: light;
 }
@@ -54,9 +56,9 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-h1, h2, h3 { font-family: var(--font-num); font-weight: 600; margin: 0; }
+h1, h2, h3 { font-family: var(--font-num); font-weight: 700; margin: 0; letter-spacing: -0.01em; }
 
-.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 600; }
 
 a { color: inherit; text-decoration: none; }
 
@@ -70,26 +72,29 @@ button {
   outline-offset: 2px;
 }
 
+svg.lucide { display: block; flex-shrink: 0; }
+
 /* Reusable primitives ---------------------------------------------- */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   border: none;
-  border-radius: var(--radius-sm);
-  padding: 12px 18px;
+  border-radius: 999px;
+  padding: 13px 20px;
   font-size: 15px;
   font-weight: 600;
-  background: var(--ink-900);
+  background: var(--accent);
   color: white;
-  min-height: 44px; /* touch target */
+  min-height: 46px; /* touch target */
+  box-shadow: 0 4px 14px -4px rgba(67, 97, 238, 0.45);
 }
-.btn:active { opacity: 0.85; }
-.btn.secondary { background: var(--paper-100); color: var(--ink-900); border: 1px solid var(--line); }
-.btn.payable { background: var(--payable-600); }
-.btn.receivable { background: var(--receivable-600); }
+.btn:active { transform: scale(0.97); }
+.btn.secondary { background: white; color: var(--ink-900); border: 1.5px solid var(--line); box-shadow: none; }
+.btn.payable { background: var(--payable-600); box-shadow: 0 4px 14px -4px rgba(217, 119, 6, 0.45); }
+.btn.receivable { background: var(--receivable-600); box-shadow: 0 4px 14px -4px rgba(15, 157, 116, 0.45); }
 .btn.block { width: 100%; }
 
 .card {
@@ -97,20 +102,20 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
-  padding: 16px;
+  padding: 18px;
 }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.field label { font-size: 13px; color: var(--ink-400); font-weight: 600; }
+.field label { font-size: 13px; color: var(--ink-700); font-weight: 600; }
 .field input, .field select, .field textarea {
   font-family: var(--font-ui);
   font-size: 16px; /* prevents iOS auto-zoom on focus */
-  padding: 12px;
-  border: 1px solid var(--line);
+  padding: 13px 14px;
+  border: 1.5px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--paper-0);
+  background: white;
   color: var(--ink-900);
-  min-height: 44px;
+  min-height: 46px;
 }
 .field input:focus, .field select:focus, .field textarea:focus {
   border-color: var(--focus);
@@ -120,7 +125,7 @@ button {
   display: inline-block;
   font-size: 12px;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: 999px;
   letter-spacing: 0.01em;
 }
@@ -136,6 +141,7 @@ button {
   padding: 14px 4px;
   border-bottom: 1px solid var(--line);
   border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
 }
 .ledger-row.payable { border-left-color: var(--payable-600); }
 .ledger-row.receivable { border-left-color: var(--receivable-600); }
@@ -154,18 +160,16 @@ button {
   .container { max-width: 960px; }
 }
 
-/* Page transitions — quick fade+slight-rise so navigation feels
-   intentional rather than an abrupt content swap. */
+/* Page transitions — slide+fade so navigation feels intentional. */
 .page-enter-active, .page-leave-active {
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.page-enter-from { opacity: 0; transform: translateY(6px); }
-.page-leave-to { opacity: 0; transform: translateY(-6px); }
+.page-enter-from { opacity: 0; transform: translateX(10px); }
+.page-leave-to { opacity: 0; transform: translateX(-10px); }
 
-/* Touch feedback — every tappable primitive gives a visible press state,
-   not just a browser default (or nothing). */
+/* Touch feedback — every tappable primitive gives a visible press state. */
 .btn, .chip, .tab, .tab-btn, .ledger-row, .tx-card, .pill {
-  transition: transform 0.1s ease, opacity 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.1s ease, opacity 0.1s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .btn:active, .chip:active, .tx-card:active {
   transform: scale(0.97);
@@ -174,10 +178,9 @@ a.ledger-row:active, a.tx-card:active {
   background: var(--paper-100);
 }
 
-/* Simple shimmer skeleton for loading states, used instead of bare
-   "Loading…" text so pages feel like they're doing something. */
+/* Simple shimmer skeleton for loading states. */
 .skeleton {
-  background: linear-gradient(90deg, var(--paper-100) 25%, #e8e4d8 37%, var(--paper-100) 63%);
+  background: linear-gradient(90deg, var(--paper-100) 25%, #E0E4F0 37%, var(--paper-100) 63%);
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
   border-radius: var(--radius-sm);
