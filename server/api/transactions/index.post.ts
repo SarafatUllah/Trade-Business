@@ -8,7 +8,7 @@ const schema = z.object({
   date: z.string(),
   partyId: z.string().optional(),
   description: z.string().max(500).optional(),
-  fields: z.record(z.any()).optional()
+  fields: z.record(z.string(), z.any()).optional()
 })
 
 export default defineEventHandler(async (event) => {
