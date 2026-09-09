@@ -4,6 +4,13 @@ import type { H3Event } from 'h3'
 import { createError, getCookie, setCookie, deleteCookie } from 'h3'
 
 const COOKIE_NAME = 'tb_session'
+// Companion, non-sensitive cookie: readable by client-side JS (unlike the
+// real session cookie, which stays httpOnly for security) purely so the
+// client-side route middleware can tell "probably logged in" without
+// needing to decode a JWT in the browser. It carries no secret — the
+// actual authorization on every API call still comes from the httpOnly
+// cookie and server-side JWT verification.
+const SESSION_FLAG_COOKIE = 'tb_has_session'
 const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7 // 7 days
 
 export interface SessionPayload {
@@ -37,10 +44,18 @@ export function setSessionCookie(event: H3Event, token: string) {
     path: '/',
     maxAge: TOKEN_TTL_SECONDS
   })
+  setCookie(event, SESSION_FLAG_COOKIE, '1', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: TOKEN_TTL_SECONDS
+  })
 }
 
 export function clearSessionCookie(event: H3Event) {
   deleteCookie(event, COOKIE_NAME, { path: '/' })
+  deleteCookie(event, SESSION_FLAG_COOKIE, { path: '/' })
 }
 
 export function getAuthSession(event: H3Event): SessionPayload | null {
