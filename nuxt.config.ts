@@ -8,6 +8,14 @@ export default defineNuxtConfig({
   // Nuxt silently falls back to its built-in welcome page because it never
   // finds a custom app.vue or any pages.
   srcDir: 'app/',
+  // IMPORTANT: srcDir above also shifts Nitro's default serverDir
+  // resolution in this Nuxt version, which silently dropped every
+  // server/api/* route from the build (they compiled with zero warnings —
+  // the routes just didn't exist, so every API call fell through to the
+  // page renderer instead, which is why login/register appeared to "do
+  // nothing"). Pin serverDir explicitly back to the project root so
+  // server/ is found regardless of srcDir.
+  serverDir: 'server/',
   modules: ['@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
   app: {
