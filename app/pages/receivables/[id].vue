@@ -28,13 +28,34 @@
     <p v-else class="settled">✓ Fully received — reminders stopped.</p>
 
     <template v-if="data.fieldDefs?.length">
-      <h3 class="section-title">Details</h3>
-      <div class="card field-list">
+      <div class="section-header">
+        <h3 class="section-title">Details</h3>
+        <button class="btn secondary small" @click="toggleEdit">{{ editing ? 'Cancel' : 'Edit' }}</button>
+      </div>
+
+      <div v-if="!editing" class="card field-list">
         <div v-for="f in data.fieldDefs" :key="f.id" class="row">
           <span class="label">{{ f.label }}</span>
           <span class="value num">{{ display(data.fields[f.key]) }}</span>
         </div>
       </div>
+
+      <form v-else class="card edit-form" @submit.prevent="onSaveDetails">
+        <DynamicFieldInput
+          v-for="f in data.fieldDefs"
+          :key="f.id"
+          :field="f"
+          :model-value="f.type === 'FORMULA' ? undefined : editValues[f.key]"
+          :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+          :force-validate="forceValidate"
+          @update:model-value="(v) => (editValues[f.key] = v)"
+        />
+        <p v-if="editError" class="error">{{ editError }}</p>
+        <button class="btn block" type="submit" :disabled="savingDetails">
+          <span>{{ savingDetails ? 'Saving…' : 'Save details' }}</span>
+          <ButtonSpinner v-if="savingDetails" />
+        </button>
+      </form>
     </template>
 
     <h3 class="section-title">Collection history</h3>
@@ -61,6 +82,49 @@ const amount = ref<number | null>(null)
 const method = ref('')
 const collecting = ref(false)
 const collectError = ref('')
+
+const editing = ref(false)
+const editValues = reactive<Record<string, unknown>>({})
+const savingDetails = ref(false)
+const editError = ref('')
+const forceValidate = ref(false)
+const fieldDefsRef = computed(() => data.value?.fieldDefs ?? [])
+const liveFormulas = useLiveFormulas(fieldDefsRef, editValues)
+
+function toggleEdit() {
+  editing.value = !editing.value
+  forceValidate.value = false
+  editError.value = ''
+  if (editing.value && data.value) {
+    for (const f of data.value.fieldDefs) {
+      editValues[f.key] = data.value.fields[f.key] ?? (f.type === 'BOOLEAN' ? false : '')
+    }
+  }
+}
+
+async function onSaveDetails() {
+  forceValidate.value = true
+  const missing = fieldDefsRef.value.some((f: any) => {
+    if (!f.isRequired || f.type === 'FORMULA') return false
+    const v = editValues[f.key]
+    return v === undefined || v === null || v === ''
+  })
+  if (missing) {
+    editError.value = 'Please fill in all required fields, highlighted below.'
+    return
+  }
+  savingDetails.value = true
+  editError.value = ''
+  try {
+    await $fetch(`/api/receivables/${route.params.id}`, { method: 'PATCH', body: { fields: editValues } })
+    editing.value = false
+    await refresh()
+  } catch (e: any) {
+    editError.value = e?.data?.statusMessage || 'Could not save these details.'
+  } finally {
+    savingDetails.value = false
+  }
+}
 
 async function onCollect() {
   collecting.value = true
@@ -106,15 +170,17 @@ function display(v: unknown) {
 .pay-form h3 { font-size: 15px; margin-bottom: 12px; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
 .settled { text-align: center; color: var(--receivable-600); font-weight: 600; padding: 16px 0; }
-.section-title { font-size: 15px; margin: 16px 0 8px; color: var(--ink-700); }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; }
+.section-title { font-size: 15px; margin: 0; color: var(--ink-700); }
 .field-list { margin-bottom: 16px; }
 .field-list .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .field-list .row:last-child { border-bottom: none; }
 .field-list .label { color: var(--ink-400); font-size: 14px; }
+.edit-form { margin-bottom: 16px; }
 .list-card { padding: 4px 12px; }
 .row-main { display: flex; flex-direction: column; gap: 2px; }
 .row-main small { color: var(--ink-400); }
 .struck { text-decoration: line-through; opacity: 0.5; }
 .reversed { color: var(--overdue-600); }
-.btn.small { padding: 6px 10px; min-height: auto; font-size: 12px; }
+.btn.small { padding: 6px 10px; min-height: auto; font-size: 12px; box-shadow: none; }
 </style>
