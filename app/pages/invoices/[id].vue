@@ -23,9 +23,9 @@
     </div>
 
     <div class="card summary">
-      <div class="row"><span>Total Amount</span><strong class="num">{{ format(data.summary.totalAmount) }}</strong></div>
-      <div class="row"><span>Total Paid</span><strong class="num">{{ format(data.summary.totalPaid) }}</strong></div>
-      <div class="row"><span>Total Received</span><strong class="num">{{ format(data.summary.totalReceived) }}</strong></div>
+      <div class="row"><span class="label">Total Amount</span><span class="value num">{{ format(data.summary?.totalAmount ?? 0) }}</span></div>
+      <div class="row"><span class="label">Total Paid</span><span class="value num">{{ format(data.summary?.totalPaid ?? 0) }}</span></div>
+      <div class="row"><span class="label">Total Received</span><span class="value num">{{ format(data.summary?.totalReceived ?? 0) }}</span></div>
     </div>
 
     <a :href="`/api/invoices/${route.params.id}/pdf`" class="btn block" target="_blank" rel="noopener">
@@ -57,5 +57,13 @@ function display(v: unknown) {
 .table-wrap { overflow-x: auto; margin-bottom: 12px; -webkit-overflow-scrolling: touch; max-width: 100%; }
 table { width: 100%; border-collapse: collapse; min-width: 480px; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
-.summary .row { display: flex; justify-content: space-between; padding: 6px 0; }
+.summary .row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.summary .label { color: var(--ink-700); }
+.summary .value { color: var(--ink-900); text-align: right; white-space: nowrap; font-weight: 700; }
 </style>
