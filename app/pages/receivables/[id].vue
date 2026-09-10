@@ -5,6 +5,7 @@
       <strong class="num">{{ format(data.remaining) }} <span class="of">of {{ format(data.originalAmount) }}</span></strong>
       <span class="pill" :class="data.status === 'OVERDUE' ? 'overdue' : 'receivable'">{{ data.status.replace('_', ' ') }}</span>
       <small>Expected {{ formatDate(data.expectedDate) }}</small>
+      <p v-if="data.notes" class="core-notes">{{ data.notes }}</p>
     </div>
 
     <form v-if="data.remaining > 0" class="card pay-form" @submit.prevent="onCollect">
@@ -27,36 +28,64 @@
     </form>
     <p v-else class="settled">✓ Fully received — reminders stopped.</p>
 
-    <template v-if="data.fieldDefs?.length">
-      <div class="section-header">
-        <h3 class="section-title">Details</h3>
-        <button class="btn secondary small" @click="toggleEdit">{{ editing ? 'Cancel' : 'Edit' }}</button>
-      </div>
+    <div class="section-header">
+      <h3 class="section-title">Details</h3>
+      <button class="btn secondary small" @click="toggleEdit">{{ editing ? 'Cancel' : 'Edit' }}</button>
+    </div>
 
-      <div v-if="!editing" class="card field-list">
-        <div v-for="f in data.fieldDefs" :key="f.id" class="row">
-          <span class="label">{{ f.label }}</span>
-          <span class="value num">{{ display(data.fields[f.key]) }}</span>
-        </div>
+    <div v-if="!editing" class="card field-list">
+      <div class="row">
+        <span class="label">Amount receivable</span>
+        <span class="value num">{{ format(data.originalAmount) }}</span>
       </div>
+      <div class="row">
+        <span class="label">Expected date</span>
+        <span class="value num">{{ formatDate(data.expectedDate) }}</span>
+      </div>
+      <div class="row">
+        <span class="label">Notes</span>
+        <span class="value">{{ data.notes || '—' }}</span>
+      </div>
+      <div v-for="f in data.fieldDefs" :key="f.id" class="row">
+        <span class="label">{{ f.label }}</span>
+        <span class="value num">{{ display(data.fields[f.key]) }}</span>
+      </div>
+    </div>
 
-      <form v-else class="card edit-form" @submit.prevent="onSaveDetails">
-        <DynamicFieldInput
-          v-for="f in data.fieldDefs"
-          :key="f.id"
-          :field="f"
-          :model-value="f.type === 'FORMULA' ? undefined : editValues[f.key]"
-          :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
-          :force-validate="forceValidate"
-          @update:model-value="(v) => (editValues[f.key] = v)"
+    <form v-else class="card edit-form" @submit.prevent="onSaveDetails">
+      <div class="field">
+        <label>Amount receivable<span class="req">*</span></label>
+        <input
+          v-model.number="editAmount" type="number" step="0.01" min="0.01" required
+          :class="{ invalid: forceValidate && !editAmount }"
         />
-        <p v-if="editError" class="error">{{ editError }}</p>
-        <button class="btn block" type="submit" :disabled="savingDetails">
-          <span>{{ savingDetails ? 'Saving…' : 'Save details' }}</span>
-          <ButtonSpinner v-if="savingDetails" />
-        </button>
-      </form>
-    </template>
+        <FieldMessage v-if="forceValidate && !editAmount" type="error" message="Enter an amount greater than 0" />
+      </div>
+      <div class="field">
+        <label>Expected date<span class="req">*</span></label>
+        <input v-model="editExpectedDate" type="date" required :class="{ invalid: forceValidate && !editExpectedDate }" />
+        <FieldMessage v-if="forceValidate && !editExpectedDate" type="error" message="Expected date is required" />
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea v-model="editNotes" rows="2" />
+      </div>
+
+      <DynamicFieldInput
+        v-for="f in data.fieldDefs"
+        :key="f.id"
+        :field="f"
+        :model-value="f.type === 'FORMULA' ? undefined : editValues[f.key]"
+        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        :force-validate="forceValidate"
+        @update:model-value="(v) => (editValues[f.key] = v)"
+      />
+      <p v-if="editError" class="error">{{ editError }}</p>
+      <button class="btn block" type="submit" :disabled="savingDetails">
+        <span>{{ savingDetails ? 'Saving…' : 'Save details' }}</span>
+        <ButtonSpinner v-if="savingDetails" />
+      </button>
+    </form>
 
     <h3 class="section-title">Collection history</h3>
     <div class="card list-card">
@@ -85,6 +114,9 @@ const collectError = ref('')
 
 const editing = ref(false)
 const editValues = reactive<Record<string, unknown>>({})
+const editAmount = ref<number | null>(null)
+const editExpectedDate = ref('')
+const editNotes = ref('')
 const savingDetails = ref(false)
 const editError = ref('')
 const forceValidate = ref(false)
@@ -96,6 +128,9 @@ function toggleEdit() {
   forceValidate.value = false
   editError.value = ''
   if (editing.value && data.value) {
+    editAmount.value = data.value.originalAmount
+    editExpectedDate.value = new Date(data.value.expectedDate).toISOString().slice(0, 10)
+    editNotes.value = data.value.notes || ''
     for (const f of data.value.fieldDefs) {
       editValues[f.key] = data.value.fields[f.key] ?? (f.type === 'BOOLEAN' ? false : '')
     }
@@ -104,19 +139,23 @@ function toggleEdit() {
 
 async function onSaveDetails() {
   forceValidate.value = true
-  const missing = fieldDefsRef.value.some((f: any) => {
+  const missingCore = !editAmount.value || !editExpectedDate.value
+  const missingCustom = fieldDefsRef.value.some((f: any) => {
     if (!f.isRequired || f.type === 'FORMULA') return false
     const v = editValues[f.key]
     return v === undefined || v === null || v === ''
   })
-  if (missing) {
+  if (missingCore || missingCustom) {
     editError.value = 'Please fill in all required fields, highlighted below.'
     return
   }
   savingDetails.value = true
   editError.value = ''
   try {
-    await $fetch(`/api/receivables/${route.params.id}`, { method: 'PATCH', body: { fields: editValues } })
+    await $fetch(`/api/receivables/${route.params.id}`, {
+      method: 'PATCH',
+      body: { originalAmount: editAmount.value, expectedDate: editExpectedDate.value, notes: editNotes.value || null, fields: editValues }
+    })
     editing.value = false
     await refresh()
   } catch (e: any) {
@@ -166,6 +205,7 @@ function display(v: unknown) {
 .summary small { color: var(--ink-400); }
 .summary strong { font-size: 24px; }
 .of { font-size: 14px; color: var(--ink-400); font-weight: 400; }
+.core-notes { font-size: 13px; color: var(--ink-700); margin: 4px 0 0; padding-top: 8px; border-top: 1px solid var(--line); }
 .pay-form { margin-bottom: 16px; }
 .pay-form h3 { font-size: 15px; margin-bottom: 12px; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
@@ -183,4 +223,5 @@ function display(v: unknown) {
 .struck { text-decoration: line-through; opacity: 0.5; }
 .reversed { color: var(--overdue-600); }
 .btn.small { padding: 6px 10px; min-height: auto; font-size: 12px; box-shadow: none; }
+.req { color: var(--overdue-600); margin-left: 2px; }
 </style>
