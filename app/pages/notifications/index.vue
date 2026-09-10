@@ -8,6 +8,8 @@
       </span>
       <ChevronRight :size="18" :stroke-width="2.2" class="push-chevron" />
     </button>
+    <p v-if="pushError" class="push-error"><CircleAlert :size="14" :stroke-width="2.2" /> {{ pushError }}</p>
+    <p v-else-if="pushChecked && !pushSupported && !pushEnabled" class="push-error"><CircleAlert :size="14" :stroke-width="2.2" /> This browser doesn't support push notifications. On iPhone, you must add this site to your Home Screen first (Share → Add to Home Screen), then open it from there.</p>
 
     <button v-if="pushEnabled" class="test-push-btn" :disabled="testingPush" @click="sendTestPush">
       <span>{{ testingPush ? 'Sending…' : 'Send test notification' }}</span>
@@ -35,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { Bell, BellRing, BellOff, ChevronRight } from '@lucide/vue'
+import { Bell, BellRing, BellOff, ChevronRight, CircleAlert } from '@lucide/vue'
 const { data, pending, refresh } = await useFetch('/api/notifications')
 
 async function markRead(n: any) {
@@ -49,6 +51,7 @@ function formatDate(d: string | Date) {
 }
 
 const pushSupported = ref(false)
+const pushChecked = ref(false)
 const pushEnabled = ref(false)
 const config = useRuntimeConfig()
 
@@ -59,6 +62,7 @@ onMounted(async () => {
     const sub = await reg?.pushManager.getSubscription().catch(() => null)
     pushEnabled.value = !!sub
   }
+  pushChecked.value = true
 })
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -69,13 +73,17 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 async function enablePush() {
+  pushError.value = ''
   try {
     const permission = await Notification.requestPermission()
-    if (permission !== 'granted') return
+    if (permission !== 'granted') {
+      pushError.value = `Browser permission was "${permission}", not granted. Check your phone's notification settings for this app/site.`
+      return
+    }
     const reg = await navigator.serviceWorker.ready
     const vapidKey = config.public.vapidPublicKey
     if (!vapidKey) {
-      alert('Push notifications are not configured on the server yet (missing VAPID keys).')
+      pushError.value = 'Push is not configured on the server yet (missing VAPID keys) — this needs to be added and the app redeployed.'
       return
     }
     const sub = await reg.pushManager.subscribe({
@@ -84,10 +92,15 @@ async function enablePush() {
     })
     await $fetch('/api/push/subscribe', { method: 'POST', body: sub.toJSON() })
     pushEnabled.value = true
-  } catch (err) {
+  } catch (err: any) {
+    // Surfaced directly in the UI (not just the console) since mobile
+    // Safari gives no easy way to check console output.
+    pushError.value = `Could not enable push: ${err?.message || err?.name || 'unknown error'}`
     console.error('Push subscription failed', err)
   }
 }
+
+const pushError = ref('')
 
 const testingPush = ref(false)
 const testResult = ref('')
@@ -98,8 +111,8 @@ async function sendTestPush() {
     await $fetch('/api/push/test', { method: 'POST' })
     testResult.value = 'Sent! You should see a notification appear shortly.'
     await refresh()
-  } catch {
-    testResult.value = 'Could not send a test notification.'
+  } catch (e: any) {
+    testResult.value = `Could not send: ${e?.data?.statusMessage || e?.message || 'unknown error'}`
   } finally {
     testingPush.value = false
   }
@@ -131,6 +144,15 @@ async function sendTestPush() {
 .push-copy strong { font-size: 14px; }
 .push-copy small { opacity: 0.85; font-size: 12px; }
 .push-chevron { opacity: 0.8; flex-shrink: 0; }
+.push-error {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 13px; color: var(--overdue-600);
+  background: var(--overdue-100);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin: -8px 0 16px;
+  line-height: 1.4;
+}
 
 .test-push-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
