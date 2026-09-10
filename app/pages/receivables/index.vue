@@ -13,7 +13,7 @@
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
     <div v-else-if="!data?.length"><EmptyState :icon="HandCoins" message="Nothing pending to receive" hint="You're fully collected — nice." /></div>
 
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <NuxtLink v-for="r in data" :key="r.id" :to="`/receivables/${r.id}`" class="ledger-row" :class="{ overdue: r.status === 'OVERDUE' }">
         <div class="row-main">
           <strong>{{ r.party.name }}</strong>

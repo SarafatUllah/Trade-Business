@@ -6,7 +6,7 @@
       </button>
     </div>
 
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <div v-if="!fields.length"><EmptyState :icon="ListPlus" :message="`No fields yet for ${labels[entity].toLowerCase()}`" hint="Tap '+ Add field' below to create your first custom column." /></div>
       <div v-for="f in fields" :key="f.id" class="field-row" :class="{ editing: editingId === f.id }">
         <div class="field-row-top" @click="toggleEdit(f)">

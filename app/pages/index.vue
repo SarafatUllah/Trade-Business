@@ -58,7 +58,7 @@
       <ArrowDownToLine :size="16" :stroke-width="2.2" />
       <h2 class="section-title">Upcoming collections</h2>
     </div>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <EmptyState v-if="!data.upcomingCollections.length" :icon="CalendarCheck2" message="Nothing expected soon" />
       <div v-for="e in data.upcomingCollections" :key="e.id" class="activity-row">
         <div class="activity-icon receivable"><ArrowDownToLine :size="16" :stroke-width="2.2" /></div>
@@ -74,7 +74,7 @@
       <ArrowUpFromLine :size="16" :stroke-width="2.2" />
       <h2 class="section-title">Upcoming payments</h2>
     </div>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <EmptyState v-if="!data.upcomingPayments.length" :icon="CalendarCheck2" message="Nothing due soon" />
       <div v-for="e in data.upcomingPayments" :key="e.id" class="activity-row">
         <div class="activity-icon payable"><ArrowUpFromLine :size="16" :stroke-width="2.2" /></div>
@@ -90,7 +90,7 @@
       <History :size="16" :stroke-width="2.2" />
       <h2 class="section-title">Recent activity</h2>
     </div>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <EmptyState v-if="!data.recentTransactions.length" :icon="BookOpen" message="No transactions yet" />
       <div v-for="t in data.recentTransactions" :key="t.id" class="activity-row">
         <div class="activity-icon neutral"><FileText :size="16" :stroke-width="2.2" /></div>

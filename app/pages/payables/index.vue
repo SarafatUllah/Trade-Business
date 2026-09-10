@@ -13,7 +13,7 @@
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
     <div v-else-if="!data?.length"><EmptyState :icon="PartyPopper" message="Nothing to pay right now" hint="You're all settled up." /></div>
 
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <NuxtLink v-for="p in data" :key="p.id" :to="`/payables/${p.id}`" class="ledger-row" :class="{ overdue: p.status === 'OVERDUE' }">
         <div class="row-main">
           <strong>{{ p.party.name }}</strong>
