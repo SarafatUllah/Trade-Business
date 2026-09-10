@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="month-nav card">
+    <div class="month-nav card full-bleed">
       <button class="nav-btn" aria-label="Previous month" @click="shiftMonth(-1)"><ChevronLeft :size="20" /></button>
       <strong>{{ monthLabel }}</strong>
       <button class="nav-btn" aria-label="Next month" @click="shiftMonth(1)"><ChevronRight :size="20" /></button>
@@ -12,7 +12,7 @@
 
       <div v-for="group in groupedByDay" :key="group.day" class="day-group">
         <div class="day-label">{{ group.label }}</div>
-        <div class="card list-card">
+        <div class="card full-bleed list-card">
           <div v-for="e in group.events" :key="e.type + e.id" class="activity-row">
             <div class="activity-icon" :class="e.type === 'PAY' ? 'payable' : 'receivable'">
               <component :is="e.type === 'PAY' ? ArrowUpFromLine : ArrowDownToLine" :size="16" :stroke-width="2.2" />
@@ -81,17 +81,12 @@ const groupedByDay = computed(() => {
 </script>
 
 <style scoped>
-/* Full-bleed: cancel out the page container's side padding so these cards
-   run edge-to-edge instead of sitting inset within it. */
 .month-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 -16px 16px;
+  margin-bottom: 16px;
   padding: 14px 18px;
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
 }
 .month-nav strong { font-size: 16px; }
 .nav-btn {
@@ -101,9 +96,9 @@ const groupedByDay = computed(() => {
 }
 .nav-btn:active { background: var(--accent); color: white; transform: scale(0.94); }
 
-.day-group { margin: 0 -16px 14px; }
+.day-group { margin-bottom: 14px; }
 .day-label { font-size: 13px; font-weight: 700; color: var(--ink-400); margin: 0 16px 6px; }
-.list-card { padding: 6px 18px; border-radius: 0; border-left: none; border-right: none; }
+.list-card { padding: 6px 18px; }
 
 .activity-row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); width: 100%; }
 .activity-row:last-child { border-bottom: none; }
@@ -119,8 +114,4 @@ const groupedByDay = computed(() => {
 .receivable-text { color: var(--receivable-600); font-weight: 700; }
 .payable-text { color: var(--payable-600); font-weight: 700; }
 .btn.small { padding: 6px 10px; min-height: auto; font-size: 12px; box-shadow: none; flex-shrink: 0; }
-
-@media (min-width: 900px) {
-  .month-nav, .day-group { margin-left: 0; margin-right: 0; border-radius: var(--radius-md); border: 1px solid var(--line); }
-}
 </style>
