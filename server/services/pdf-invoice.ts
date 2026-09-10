@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit'
 import dayjs from 'dayjs'
-import { formatCurrency } from '../utils/money'
+import { round } from '../utils/money'
 
 export interface InvoiceColumn {
   key: string
@@ -25,64 +25,130 @@ export interface InvoicePdfInput {
   }
 }
 
+// PDFKit's built-in standard fonts (Helvetica etc.) only support the
+// WinAnsi/Latin-1 glyph set — they have NO glyph for currency symbols
+// like ৳ (Bengali Taka, U+09F3), which rendered as a broken/missing
+// character box in the PDF. Rather than bundle and embed a custom
+// Unicode font (a much bigger dependency for a currency symbol), PDF
+// output uses the plain currency code instead — this always renders
+// correctly regardless of font, and is standard practice on invoices/
+// bank statements anyway (e.g. "BDT 1,234.56").
+function formatMoneyForPdf(value: number, currency: string): string {
+  const amount = round(value).toNumber()
+  return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+const TABLE_TOP_MARGIN = 40
+const ROW_PADDING = 6
+const HEADER_ROW_HEIGHT = 22
+const MIN_COL_WIDTH = 60
+
 /** Renders an invoice to a PDF buffer. Server-side generation (rather than
  *  client-side canvas/print) keeps output byte-identical across devices. */
 export function generateInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 40 })
+    const doc = new PDFDocument({ size: 'A4', margin: TABLE_TOP_MARGIN })
     const chunks: Buffer[] = []
     doc.on('data', (chunk) => chunks.push(chunk))
     doc.on('end', () => resolve(Buffer.concat(chunks)))
     doc.on('error', reject)
 
-    doc.fontSize(18).font('Helvetica-Bold').text(input.business.name, { continued: false })
-    doc.fontSize(10).font('Helvetica').fillColor('#555').text('Invoice')
-    doc.moveDown(0.5)
+    const pageLeft = doc.page.margins.left
+    const pageRight = doc.page.width - doc.page.margins.right
+    const contentWidth = pageRight - pageLeft
+
+    // ---------- Header ----------
+    doc.rect(pageLeft, doc.y, contentWidth, 4).fill('#4361EE')
+    doc.moveDown(0.8)
+    doc.fillColor('#14181F').fontSize(18).font('Helvetica-Bold').text(input.business.name)
+    doc.fontSize(10).font('Helvetica').fillColor('#555').text('INVOICE')
+    doc.moveDown(0.6)
 
     doc.fillColor('#000').fontSize(11).font('Helvetica-Bold').text(`Invoice #${input.invoiceNumber}`)
-    doc.font('Helvetica').fontSize(10)
+    doc.font('Helvetica').fontSize(9).fillColor('#555')
     if (input.periodStart && input.periodEnd) {
       doc.text(`Period: ${dayjs(input.periodStart).format('D MMM YYYY')} - ${dayjs(input.periodEnd).format('D MMM YYYY')}`)
     }
     doc.text(`Generated: ${dayjs().format('D MMM YYYY, h:mm A')}`)
-    doc.moveDown(0.5)
+    doc.moveDown(0.6)
 
-    doc.font('Helvetica-Bold').text('Bill To')
-    doc.font('Helvetica').text(input.party.name)
-    if (input.party.address) doc.text(input.party.address)
-    if (input.party.phone) doc.text(input.party.phone)
+    doc.fillColor('#000').font('Helvetica-Bold').fontSize(10).text('Bill To')
+    doc.font('Helvetica').fontSize(10).text(input.party.name)
+    if (input.party.address) doc.fontSize(9).fillColor('#555').text(input.party.address)
+    if (input.party.phone) doc.fontSize(9).fillColor('#555').text(input.party.phone)
+    doc.fillColor('#000')
     doc.moveDown(1)
 
-    // Table header
-    const startX = doc.x
-    const colWidth = (doc.page.width - doc.page.margins.left - doc.page.margins.right) / Math.max(1, input.columns.length)
-    let y = doc.y
-    doc.font('Helvetica-Bold').fontSize(9)
-    input.columns.forEach((col, i) => {
-      doc.text(col.label, startX + i * colWidth, y, { width: colWidth, align: i === 0 ? 'left' : 'right' })
-    })
-    y += 16
-    doc.moveTo(startX, y).lineTo(doc.page.width - doc.page.margins.right, y).strokeColor('#ccc').stroke()
-    y += 6
+    // ---------- Table ----------
+    // Columns share width unevenly rather than strictly equally: the
+    // first column (usually a date/description) gets more room, and
+    // width per column shrinks gracefully as more columns are added,
+    // with a hard floor so text never becomes unreadably cramped.
+    const colCount = Math.max(1, input.columns.length)
+    const firstColShare = colCount > 1 ? 1.4 : 1
+    const totalShares = firstColShare + (colCount - 1)
+    const baseUnit = contentWidth / totalShares
+    const colWidths = input.columns.map((_, i) => Math.max(MIN_COL_WIDTH, (i === 0 ? firstColShare : 1) * baseUnit))
+    // If columns had to be floored to MIN_COL_WIDTH, they may now overflow
+    // the page width slightly for very high column counts — shrink font
+    // instead of letting columns run off the page.
+    const totalColWidth = colWidths.reduce((a, b) => a + b, 0)
+    const tableFontSize = totalColWidth > contentWidth * 1.15 ? 7 : 8.5
 
-    doc.font('Helvetica').fontSize(9)
-    for (const row of input.rows) {
-      if (y > doc.page.height - doc.page.margins.bottom - 60) {
+    function colX(i: number): number {
+      return pageLeft + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+    }
+
+    function drawTableHeader() {
+      const y = doc.y
+      doc.rect(pageLeft, y, contentWidth, HEADER_ROW_HEIGHT).fill('#F1EEE7')
+      doc.fillColor('#14181F').font('Helvetica-Bold').fontSize(tableFontSize)
+      input.columns.forEach((col, i) => {
+        doc.text(col.label, colX(i) + 4, y + 6, { width: colWidths[i] - 8, align: i === 0 ? 'left' : 'right' })
+      })
+      doc.y = y + HEADER_ROW_HEIGHT
+      doc.fillColor('#000')
+    }
+
+    drawTableHeader()
+    doc.font('Helvetica').fontSize(tableFontSize)
+
+    input.rows.forEach((row, rowIndex) => {
+      // Measure the tallest cell in this row (accounting for text wrap)
+      // BEFORE drawing, so alternating-row shading and cell text never
+      // overlap the next row — the original version used a fixed row
+      // height regardless of wrapped content.
+      const cellHeights = input.columns.map((col, i) => {
+        const raw = row[col.key]
+        const display = typeof raw === 'number' ? formatMoneyForPdf(raw, input.business.currency) : String(raw ?? '—')
+        return doc.heightOfString(display, { width: colWidths[i] - 8 })
+      })
+      const rowHeight = Math.max(...cellHeights, 14) + ROW_PADDING
+
+      if (doc.y + rowHeight > doc.page.height - doc.page.margins.bottom - 80) {
         doc.addPage()
-        y = doc.page.margins.top
+        doc.y = doc.page.margins.top
+        drawTableHeader()
+        doc.font('Helvetica').fontSize(tableFontSize)
+      }
+
+      const y = doc.y
+      if (rowIndex % 2 === 1) {
+        doc.rect(pageLeft, y, contentWidth, rowHeight).fill('#FBFAF7')
+        doc.fillColor('#000')
       }
       input.columns.forEach((col, i) => {
         const raw = row[col.key]
-        const display = typeof raw === 'number' ? formatCurrency(raw, input.business.currency) : String(raw ?? '')
-        doc.text(display, startX + i * colWidth, y, { width: colWidth, align: i === 0 ? 'left' : 'right' })
+        const display = typeof raw === 'number' ? formatMoneyForPdf(raw, input.business.currency) : String(raw ?? '—')
+        doc.text(display, colX(i) + 4, y + 4, { width: colWidths[i] - 8, align: i === 0 ? 'left' : 'right' })
       })
-      y += 16
-    }
+      doc.y = y + rowHeight
+    })
 
-    y += 10
-    doc.moveTo(startX, y).lineTo(doc.page.width - doc.page.margins.right, y).strokeColor('#ccc').stroke()
-    y += 12
+    doc.moveTo(pageLeft, doc.y).lineTo(pageRight, doc.y).strokeColor('#ccc').stroke()
+    doc.moveDown(0.8)
 
+    // ---------- Summary ----------
     const summaryLines: [string, number][] = [
       ['Total Amount', input.summary.totalAmount],
       ['Total Paid', input.summary.totalPaid],
@@ -91,13 +157,23 @@ export function generateInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
       ['Total Receivable', input.summary.totalReceivable],
       ['Outstanding Balance', input.summary.outstandingBalance]
     ]
-    doc.font('Helvetica-Bold').fontSize(10)
+    const summaryLabelWidth = 160
+    doc.fontSize(10)
     for (const [label, value] of summaryLines) {
-      doc.text(`${label}:`, startX, y, { continued: true, width: colWidth * 2 })
-      doc.font('Helvetica').text(`  ${formatCurrency(value, input.business.currency)}`, { align: 'right' })
-      doc.font('Helvetica-Bold')
-      y += 16
+      const y = doc.y
+      doc.font('Helvetica-Bold').fillColor('#555').text(label, pageLeft, y, { width: summaryLabelWidth })
+      doc.font('Helvetica-Bold').fillColor('#000').text(
+        formatMoneyForPdf(value, input.business.currency),
+        pageRight - summaryLabelWidth, y, { width: summaryLabelWidth, align: 'right' }
+      )
+      doc.y = y + 18
     }
+
+    doc.fontSize(8).fillColor('#999').text(
+      `Generated by Trade Business — ${dayjs().format('D MMM YYYY')}`,
+      pageLeft, doc.page.height - doc.page.margins.bottom - 20,
+      { width: contentWidth, align: 'center' }
+    )
 
     doc.end()
   })
