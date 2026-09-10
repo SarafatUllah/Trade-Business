@@ -132,6 +132,15 @@ onMounted(() => {
   flex: 1;
   padding-top: 18px;
   padding-bottom: 100px;
+  /* Without this, a flex item defaults to min-width:auto, which lets it
+     grow wider than the viewport to fit its widest descendant (e.g. an
+     invoice table) instead of respecting the flex container's width —
+     the classic flexbox intrinsic-min-size overflow bug. This silently
+     broke every page's horizontal bounds whenever any wide content (like
+     the invoice preview table) appeared anywhere on the page, not just
+     the table itself: the WHOLE content column widened, pushing
+     everything else (e.g. summary row values) off-screen too. */
+  min-width: 0;
 }
 
 .tabbar {

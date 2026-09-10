@@ -81,19 +81,24 @@ export function generateInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
 
     // ---------- Table ----------
     // Columns share width unevenly rather than strictly equally: the
-    // first column (usually a date/description) gets more room, and
-    // width per column shrinks gracefully as more columns are added,
-    // with a hard floor so text never becomes unreadably cramped.
+    // first column (usually a date/description) gets more room. With
+    // many columns, MIN_COL_WIDTH floors can add up to more than the
+    // page's content width — the previous version only shrank the font
+    // in that case, leaving the column x-positions themselves still
+    // summing wider than the page, so the table visibly ran off the
+    // right edge regardless of font size. Now widths are scaled down
+    // proportionally (below the "preferred" floor if truly necessary) so
+    // the table always fits exactly within the page, and font size is a
+    // secondary readability adjustment on top of that, not the only fix.
     const colCount = Math.max(1, input.columns.length)
     const firstColShare = colCount > 1 ? 1.4 : 1
     const totalShares = firstColShare + (colCount - 1)
     const baseUnit = contentWidth / totalShares
-    const colWidths = input.columns.map((_, i) => Math.max(MIN_COL_WIDTH, (i === 0 ? firstColShare : 1) * baseUnit))
-    // If columns had to be floored to MIN_COL_WIDTH, they may now overflow
-    // the page width slightly for very high column counts — shrink font
-    // instead of letting columns run off the page.
-    const totalColWidth = colWidths.reduce((a, b) => a + b, 0)
-    const tableFontSize = totalColWidth > contentWidth * 1.15 ? 7 : 8.5
+    const preferredWidths = input.columns.map((_, i) => Math.max(MIN_COL_WIDTH, (i === 0 ? firstColShare : 1) * baseUnit))
+    const totalPreferredWidth = preferredWidths.reduce((a, b) => a + b, 0)
+    const scale = totalPreferredWidth > contentWidth ? contentWidth / totalPreferredWidth : 1
+    const colWidths = preferredWidths.map(w => w * scale)
+    const tableFontSize = scale < 0.85 ? 7 : scale < 1 ? 7.5 : 8.5
 
     function colX(i: number): number {
       return pageLeft + colWidths.slice(0, i).reduce((a, b) => a + b, 0)

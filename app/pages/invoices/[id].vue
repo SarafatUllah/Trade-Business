@@ -54,7 +54,7 @@ function display(v: unknown) {
 .invoice-head h2 { font-size: 20px; }
 .invoice-head p { margin: 2px 0 0; }
 .muted { color: var(--ink-400); font-size: 13px; }
-.table-wrap { overflow-x: auto; margin-bottom: 12px; }
+.table-wrap { overflow-x: auto; margin-bottom: 12px; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; min-width: 480px; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
 .summary .row { display: flex; justify-content: space-between; padding: 6px 0; }

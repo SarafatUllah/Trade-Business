@@ -47,5 +47,5 @@ async function onLogout() {
 .admin-nav { display: flex; gap: 4px; padding: 10px 12px; background: white; border-bottom: 1px solid var(--line); overflow-x: auto; }
 .nav-item { padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ink-400); white-space: nowrap; }
 .nav-item.active { background: var(--accent); color: white; }
-.admin-content { flex: 1; padding: 18px 16px 40px; }
+.admin-content { flex: 1; padding: 18px 16px 40px; min-width: 0; }
 </style>
