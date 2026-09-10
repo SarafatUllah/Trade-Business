@@ -20,11 +20,18 @@
         <small>{{ tab.label }}</small>
       </NuxtLink>
     </nav>
+
+    <!-- Single layout-level FAB: lives outside the page transition so it
+         never slides/jumps between pages, and its target adapts to
+         whatever "add" action makes sense on the current page. -->
+    <NuxtLink v-if="fabTarget" :to="fabTarget" class="global-fab" :aria-label="fabLabel">
+      <Plus :size="26" :stroke-width="2.4" />
+    </NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
-import { LayoutDashboard, BookText, CalendarClock, Factory, Settings, Bell } from '@lucide/vue'
+import { LayoutDashboard, BookText, CalendarClock, Factory, Settings, Bell, Plus } from '@lucide/vue'
 
 const route = useRoute()
 const unread = ref(0)
@@ -40,6 +47,19 @@ const tabs = [
 function isActive(to: string) {
   return to === '/' ? route.path === '/' : route.path.startsWith(to)
 }
+
+// Maps the current page to whatever "add new" action it offers, so one
+// FAB works everywhere without living inside (and sliding with) the page.
+const fabRules: { match: (path: string) => boolean; to: string; label: string }[] = [
+  { match: p => p === '/', to: '/transactions/new', label: 'Add transaction' },
+  { match: p => p === '/transactions', to: '/transactions/new', label: 'Add transaction' },
+  { match: p => p === '/parties', to: '/parties/new', label: 'Add party' },
+  { match: p => p === '/payables', to: '/payables/new', label: 'Add payable' },
+  { match: p => p === '/receivables', to: '/receivables/new', label: 'Add receivable' }
+]
+const activeFabRule = computed(() => fabRules.find(r => r.match(route.path)))
+const fabTarget = computed(() => activeFabRule.value?.to)
+const fabLabel = computed(() => activeFabRule.value?.label ?? 'Add')
 
 const titles: Record<string, string> = {
   '/': 'Dashboard',
@@ -152,5 +172,27 @@ onMounted(() => {
 
 @media (min-width: 900px) {
   .tabbar { max-width: 720px; margin: 0 auto; left: 0; right: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: 20px 20px 0 0; bottom: 0; box-shadow: var(--shadow-float); }
+}
+
+.global-fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px -6px rgba(67, 97, 238, 0.55);
+  z-index: 25;
+  transition: transform 0.1s ease;
+}
+.global-fab:active { transform: scale(0.94); }
+
+@media (min-width: 900px) {
+  .global-fab { right: calc(50% - 360px + 20px); }
 }
 </style>

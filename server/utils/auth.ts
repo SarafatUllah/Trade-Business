@@ -11,7 +11,8 @@ const COOKIE_NAME = 'tb_session'
 // actual authorization on every API call still comes from the httpOnly
 // cookie and server-side JWT verification.
 const SESSION_FLAG_COOKIE = 'tb_has_session'
-const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7 // 7 days
+const REMEMBER_TTL_SECONDS = 60 * 60 * 24 * 30 // 30 days, "Remember me" checked
+const SESSION_TTL_SECONDS = 60 * 60 * 24 // 1 day, default (unchecked)
 
 export interface SessionPayload {
   userId: string
@@ -32,24 +33,29 @@ function getSecret(event: H3Event): string {
   return config.jwtSecret
 }
 
-export function signSession(event: H3Event, payload: SessionPayload): string {
-  return jwt.sign(payload, getSecret(event), { expiresIn: TOKEN_TTL_SECONDS })
+export function signSession(event: H3Event, payload: SessionPayload, remember = true): string {
+  const ttl = remember ? REMEMBER_TTL_SECONDS : SESSION_TTL_SECONDS
+  return jwt.sign(payload, getSecret(event), { expiresIn: ttl })
 }
 
-export function setSessionCookie(event: H3Event, token: string) {
+export function setSessionCookie(event: H3Event, token: string, remember = true) {
+  // "Remember me" unchecked: omit maxAge entirely so the cookie is a true
+  // browser-session cookie (cleared when the browser closes), with the
+  // JWT's own expiry as a safety net. Checked: a real persistent maxAge.
+  const maxAge = remember ? REMEMBER_TTL_SECONDS : undefined
   setCookie(event, COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: TOKEN_TTL_SECONDS
+    ...(maxAge ? { maxAge } : {})
   })
   setCookie(event, SESSION_FLAG_COOKIE, '1', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: TOKEN_TTL_SECONDS
+    ...(maxAge ? { maxAge } : {})
   })
 }
 

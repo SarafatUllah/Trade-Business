@@ -22,13 +22,11 @@
         <span class="num receivable-text">{{ format(r.remaining) }}</span>
       </NuxtLink>
     </div>
-
-    <NuxtLink to="/receivables/new" class="fab receivable" aria-label="Add receivable"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
-import { HandCoins, Plus } from '@lucide/vue'
+import { HandCoins } from '@lucide/vue'
 const { format } = useCurrency()
 const statusFilter = ref('')
 const { data, pending } = await useFetch('/api/receivables', { query: computed(() => ({ status: statusFilter.value || undefined })) })
@@ -45,11 +43,4 @@ function formatDate(d: string | Date) {
 .row-main { display: flex; flex-direction: column; gap: 4px; }
 .row-main small { color: var(--ink-400); }
 .receivable-text { color: var(--receivable-600); font-weight: 700; }
-.fab {
-  position: fixed; right: 20px; bottom: calc(88px + env(safe-area-inset-bottom));
-  width: 56px; height: 56px; border-radius: 50%; color: white;
-  font-size: 28px; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 12px rgba(22,33,43,0.3); z-index: 15;
-}
-.fab.receivable { background: var(--receivable-600); }
 </style>

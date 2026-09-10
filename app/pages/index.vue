@@ -101,14 +101,12 @@
         <span class="num muted">{{ formatDate(t.date) }}</span>
       </div>
     </div>
-
-    <NuxtLink to="/transactions/new" class="fab" aria-label="Add transaction"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
 import {
-  Plus, TrendingUp, TrendingDown, HandCoins, Wallet, CalendarClock, AlertTriangle,
+  TrendingUp, TrendingDown, HandCoins, Wallet, CalendarClock, AlertTriangle,
   ArrowDownToLine, ArrowUpFromLine, History, CalendarCheck2, BookOpen, FileText
 } from '@lucide/vue'
 const { format } = useCurrency()
@@ -192,19 +190,4 @@ const { data, pending } = await useFetch('/api/dashboard')
 .payable-text { color: var(--payable-600); font-weight: 700; }
 .muted { color: var(--ink-400); font-weight: 500; font-size: 13px; }
 
-.fab {
-  position: fixed;
-  right: 20px;
-  bottom: calc(88px + env(safe-area-inset-bottom));
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 24px -6px rgba(67, 97, 238, 0.55);
-  z-index: 15;
-}
 </style>

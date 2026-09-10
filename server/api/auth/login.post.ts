@@ -4,7 +4,8 @@ import { verifyPassword, signSession, setSessionCookie } from '../../utils/auth'
 
 const schema = z.object({
   email: z.string().email(),
-  password: z.string().min(1)
+  password: z.string().min(1),
+  remember: z.boolean().optional()
 })
 
 export default defineEventHandler(async (event) => {
@@ -13,7 +14,7 @@ export default defineEventHandler(async (event) => {
   if (!parsed.success) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid input' })
   }
-  const { email, password } = parsed.data
+  const { email, password, remember = true } = parsed.data
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -27,8 +28,8 @@ export default defineEventHandler(async (event) => {
   const membership = user.memberships[0]
   if (!membership) throw createError({ statusCode: 403, statusMessage: 'No business associated with this account' })
 
-  const token = signSession(event, { userId: user.id, businessId: membership.businessId, role: membership.role })
-  setSessionCookie(event, token)
+  const token = signSession(event, { userId: user.id, businessId: membership.businessId, role: membership.role }, remember)
+  setSessionCookie(event, token, remember)
 
   return {
     user: { id: user.id, name: user.name, email: user.email },

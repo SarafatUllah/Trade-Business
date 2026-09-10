@@ -1,12 +1,16 @@
 <template>
   <div>
-    <input v-model="search" type="search" placeholder="Search parties…" class="search-input" />
+    <div class="search-wrap">
+      <Search :size="18" :stroke-width="2" class="search-icon" />
+      <input v-model="search" type="search" placeholder="Search parties…" class="search-input" />
+    </div>
 
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
     <div v-else-if="!filtered.length"><EmptyState :icon="Factory" message="No parties yet" hint="Tap the + button to add a Mill or trading partner." /></div>
 
     <div class="card list-card">
-      <NuxtLink v-for="p in filtered" :key="p.id" :to="`/parties/${p.id}`" class="ledger-row">
+      <NuxtLink v-for="p in filtered" :key="p.id" :to="`/parties/${p.id}`" class="activity-row">
+        <div class="activity-icon" :class="partyIconClass(p)"><Factory :size="17" :stroke-width="2.2" /></div>
         <div class="row-main">
           <strong>{{ p.name }}</strong>
           <small v-if="p.phone">{{ p.phone }}</small>
@@ -17,13 +21,11 @@
         </div>
       </NuxtLink>
     </div>
-
-    <NuxtLink to="/parties/new" class="fab" aria-label="Add party"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Factory, Plus } from '@lucide/vue'
+import { Factory, Search } from '@lucide/vue'
 const search = ref('')
 const { format } = useCurrency()
 const { data, pending } = await useFetch('/api/parties')
@@ -33,27 +35,40 @@ const filtered = computed(() => {
   if (!search.value) return list
   return list.filter((p: any) => p.name.toLowerCase().includes(search.value.toLowerCase()))
 })
+
+function partyIconClass(p: any) {
+  if (p.outstandingPayable > 0 && p.outstandingReceivable > 0) return 'neutral'
+  if (p.outstandingPayable > 0) return 'payable'
+  if (p.outstandingReceivable > 0) return 'receivable'
+  return 'neutral'
+}
 </script>
 
 <style scoped>
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-400); }
 .search-input {
   width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  min-height: 46px;
+  padding: 10px 12px 10px 42px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
   font-size: 16px;
   background: white;
-  margin-bottom: 12px;
 }
-.list-card { padding: 4px 12px; }
-.row-main { display: flex; flex-direction: column; gap: 2px; }
+.search-input:focus { border-color: var(--focus); outline: none; box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.12); }
+.list-card { padding: 4px 10px; }
+.activity-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.activity-row:last-child { border-bottom: none; }
+.activity-icon {
+  width: 38px; height: 38px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.activity-icon.receivable { background: var(--receivable-100); color: var(--receivable-600); }
+.activity-icon.payable { background: var(--payable-100); color: var(--payable-600); }
+.activity-icon.neutral { background: var(--paper-100); color: var(--ink-400); }
+.row-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .row-main small { color: var(--ink-400); }
 .amounts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-.fab {
-  position: fixed; right: 20px; bottom: calc(88px + env(safe-area-inset-bottom));
-  width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: white;
-  font-size: 28px; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 12px rgba(22,33,43,0.3); z-index: 15;
-}
 </style>

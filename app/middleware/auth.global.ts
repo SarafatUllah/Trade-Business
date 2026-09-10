@@ -11,7 +11,7 @@
 // expired, or missing session there is rejected with a 401 regardless of
 // what this flag cookie says.
 export default defineNuxtRouteMiddleware((to) => {
-  const publicPages = ['/login', '/register']
+  const publicPages = ['/login', '/register', '/forgot-password', '/reset-password']
   if (publicPages.includes(to.path)) return
 
   const hasSession = useCookie('tb_has_session')

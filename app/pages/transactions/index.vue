@@ -70,13 +70,11 @@
       <span>{{ page }} / {{ data.pagination.totalPages }}</span>
       <button class="btn secondary" :disabled="page >= data.pagination.totalPages" @click="page++; reload()">Next</button>
     </div>
-
-    <NuxtLink to="/transactions/new" class="fab" aria-label="Add transaction"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
-import { BookOpen, Plus } from '@lucide/vue'
+import { BookOpen } from '@lucide/vue'
 const search = ref('')
 const partyId = ref('')
 const dateFrom = ref('')
@@ -146,22 +144,6 @@ function display(v: unknown) {
 .desktop-table { display: none; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
 
-.fab {
-  position: fixed;
-  right: 20px;
-  bottom: calc(88px + env(safe-area-inset-bottom));
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  font-size: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(22,33,43,0.3);
-  z-index: 15;
-}
 
 @media (min-width: 900px) {
   .mobile-list { display: none; }

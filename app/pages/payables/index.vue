@@ -22,13 +22,11 @@
         <span class="num payable-text">{{ format(p.remaining) }}</span>
       </NuxtLink>
     </div>
-
-    <NuxtLink to="/payables/new" class="fab payable" aria-label="Add payable"><Plus :size="26" :stroke-width="2.4" /></NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PartyPopper, Plus } from '@lucide/vue'
+import { PartyPopper } from '@lucide/vue'
 const { format } = useCurrency()
 const statusFilter = ref('')
 const { data, pending } = await useFetch('/api/payables', { query: computed(() => ({ status: statusFilter.value || undefined })) })
@@ -45,11 +43,4 @@ function formatDate(d: string | Date) {
 .row-main { display: flex; flex-direction: column; gap: 4px; }
 .row-main small { color: var(--ink-400); }
 .payable-text { color: var(--payable-600); font-weight: 700; }
-.fab {
-  position: fixed; right: 20px; bottom: calc(88px + env(safe-area-inset-bottom));
-  width: 56px; height: 56px; border-radius: 50%; color: white;
-  font-size: 28px; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 12px rgba(22,33,43,0.3); z-index: 15;
-}
-.fab.payable { background: var(--payable-600); }
 </style>

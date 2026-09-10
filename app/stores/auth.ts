@@ -21,8 +21,8 @@ export const useAuthStore = defineStore('auth', {
       this.role = (data as any).role ?? null
       this.loaded = true
     },
-    async login(email: string, password: string) {
-      const data = await $fetch('/api/auth/login', { method: 'POST', body: { email, password } })
+    async login(email: string, password: string, remember = true) {
+      const data = await $fetch('/api/auth/login', { method: 'POST', body: { email, password, remember } })
       this.user = data.user
       this.business = data.business
       this.loaded = true
