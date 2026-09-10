@@ -22,7 +22,7 @@
     <div v-else-if="!data?.length"><EmptyState :icon="BellOff" message="You're all caught up" hint="No new notifications right now." /></div>
 
     <div v-else class="card full-bleed list-card">
-      <div v-for="n in data" :key="n.id" class="notif-row" :class="{ unread: !n.isRead }" @click="markRead(n)">
+      <div v-for="n in data" :key="n.id" class="notif-row" :class="{ unread: !n.isRead }" @click="onNotificationClick(n)">
         <div class="notif-icon" :class="{ unread: !n.isRead }"><Bell :size="17" :stroke-width="2.2" /></div>
         <div class="row-main">
           <div class="row-top">
@@ -32,6 +32,7 @@
           <small class="body-text">{{ n.body }}</small>
           <small class="time">{{ formatDate(n.createdAt) }}</small>
         </div>
+        <ChevronRight v-if="targetPathFor(n)" :size="16" :stroke-width="2.2" class="notif-chevron" />
       </div>
     </div>
   </div>
@@ -41,10 +42,27 @@
 import { Bell, BellRing, BellOff, ChevronRight, CircleAlert } from '@lucide/vue'
 const { data, pending, refresh } = await useFetch('/api/notifications')
 
+const router = useRouter()
+
 async function markRead(n: any) {
   if (n.isRead) return
   await $fetch(`/api/notifications/${n.id}`, { method: 'PATCH' })
   await refresh()
+}
+
+function targetPathFor(n: any): string | null {
+  const obligationType = n.data?.obligationType
+  if (obligationType === 'PAYABLE' && n.data?.payableId) return `/payables/${n.data.payableId}`
+  if (obligationType === 'RECEIVABLE' && n.data?.receivableId) return `/receivables/${n.data.receivableId}`
+  return null
+}
+
+async function onNotificationClick(n: any) {
+  // Mark read first so the visual state updates even if navigation is
+  // slow or the target page redirects — the two actions are independent.
+  if (!n.isRead) await markRead(n)
+  const target = targetPathFor(n)
+  if (target) router.push(target)
 }
 
 function formatDate(d: string | Date) {
@@ -231,6 +249,7 @@ async function sendTestPush() {
 .row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .row-top strong { font-size: 14px; }
 .unread-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--overdue-600); flex-shrink: 0; }
+.notif-chevron { color: var(--ink-400); flex-shrink: 0; align-self: center; }
 .body-text { color: var(--ink-700); line-height: 1.4; }
 .time { color: var(--ink-400); font-size: 11px; }
 </style>

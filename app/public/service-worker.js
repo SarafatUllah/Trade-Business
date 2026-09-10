@@ -43,6 +43,22 @@ self.addEventListener('notificationclick', (event) => {
   const type = event.notification.data?.obligationType
   const path = obligationId
     ? (type === 'PAYABLE' ? `/payables/${obligationId}` : `/receivables/${obligationId}`)
-    : '/'
-  event.waitUntil(self.clients.openWindow(path))
+    : '/notifications'
+  const targetUrl = new URL(path, self.location.origin).href
+
+  // Prefer focusing and navigating an already-open window over spawning a
+  // duplicate one, so tapping a notification while the app is already
+  // open (just backgrounded/locked) feels like switching to it, not
+  // launching a second copy.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.postMessage({ type: 'notification-navigate', path })
+          return client.focus()
+        }
+      }
+      return self.clients.openWindow(targetUrl)
+    })
+  )
 })

@@ -1,4 +1,4 @@
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin((nuxtApp) => {
   if (!(import.meta.client && 'serviceWorker' in navigator)) return
 
   const registerNow = () => {
@@ -20,4 +20,14 @@ export default defineNuxtPlugin(() => {
   } else {
     window.addEventListener('load', registerNow, { once: true })
   }
+
+  // Tapping a notification while the app is already open (just
+  // backgrounded/locked) focuses the existing window rather than opening
+  // a new one — focusing alone doesn't change the route, so the service
+  // worker posts the intended path here and we navigate client-side.
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'notification-navigate' && event.data.path) {
+      nuxtApp.runWithContext(() => navigateTo(event.data.path))
+    }
+  })
 })
