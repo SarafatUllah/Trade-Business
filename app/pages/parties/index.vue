@@ -8,7 +8,7 @@
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="70" /></div>
     <div v-else-if="!filtered.length"><EmptyState :icon="Factory" message="No parties yet" hint="Tap the + button to add a Mill or trading partner." /></div>
 
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <NuxtLink v-for="p in filtered" :key="p.id" :to="`/parties/${p.id}`" class="activity-row">
         <div class="activity-icon" :class="partyIconClass(p)"><Factory :size="17" :stroke-width="2.2" /></div>
         <div class="row-main">

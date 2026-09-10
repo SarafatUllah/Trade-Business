@@ -1,6 +1,6 @@
 <template>
   <div v-if="data">
-    <div class="card party-header">
+    <div class="card full-bleed party-header">
       <h2>{{ data.party.name }}</h2>
       <p v-if="data.party.phone">{{ data.party.phone }}</p>
       <p v-if="data.party.address" class="muted">{{ data.party.address }}</p>
@@ -23,7 +23,7 @@
     </div>
 
     <h3 class="section-title">Receivables</h3>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <p v-if="!data.receivables.length" class="empty-state">None yet.</p>
       <NuxtLink v-for="r in data.receivables" :key="r.id" :to="`/receivables/${r.id}`" class="ledger-row" :class="{ overdue: r.status === 'OVERDUE' }">
         <div class="row-main">
@@ -35,7 +35,7 @@
     </div>
 
     <h3 class="section-title">Payables</h3>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <p v-if="!data.payables.length" class="empty-state">None yet.</p>
       <NuxtLink v-for="p in data.payables" :key="p.id" :to="`/payables/${p.id}`" class="ledger-row" :class="{ overdue: p.status === 'OVERDUE' }">
         <div class="row-main">
@@ -47,7 +47,7 @@
     </div>
 
     <h3 class="section-title">Recent transactions</h3>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <p v-if="!data.transactions.length" class="empty-state">None yet.</p>
       <NuxtLink v-for="t in data.transactions" :key="t.id" :to="`/transactions/${t.id}`" class="ledger-row">
         <div class="row-main">
@@ -58,7 +58,7 @@
     </div>
 
     <h3 class="section-title">Invoices</h3>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <p v-if="!data.invoices.length" class="empty-state">No invoices generated yet.</p>
       <NuxtLink v-for="i in data.invoices" :key="i.id" :to="`/invoices/${i.id}`" class="ledger-row">
         <div class="row-main">
