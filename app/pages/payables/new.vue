@@ -1,61 +1,74 @@
 <template>
-  <form @submit.prevent="onSubmit">
-    <div class="field">
-      <label>Party / Mill<span class="req">*</span></label>
-      <select v-model="partyId" required :class="{ invalid: (touched.party || forceValidate) && !partyId }" @blur="touched.party = true">
-        <option value="" disabled>Select party…</option>
-        <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
-      </select>
-      <FieldMessage v-if="(touched.party || forceValidate) && !partyId" type="error" message="Select a party" />
-    </div>
-    <div class="field">
-      <label>Amount payable<span class="req">*</span></label>
-      <input
-        v-model.number="originalAmount" type="number" step="0.01" min="0.01" required
-        :class="{ invalid: (touched.amount || forceValidate) && !originalAmount }" @blur="touched.amount = true"
-      />
-      <FieldMessage v-if="(touched.amount || forceValidate) && !originalAmount" type="error" message="Enter an amount greater than 0" />
-    </div>
-    <div class="field">
-      <label>Due date<span class="req">*</span></label>
-      <input
-        v-model="dueDate" type="date" required
-        :class="{ invalid: (touched.dueDate || forceValidate) && !dueDate }" @blur="touched.dueDate = true"
-      />
-      <FieldMessage v-if="(touched.dueDate || forceValidate) && !dueDate" type="error" message="Due date is required" />
-    </div>
-    <div class="field">
-      <label>Remind me</label>
-      <div class="chips">
-        <button
-          v-for="opt in reminderOptions" :key="opt.value" type="button"
-          class="chip" :class="{ active: reminderDays.includes(opt.value) }"
-          @click="toggleReminder(opt.value)"
-        >{{ opt.label }}</button>
+  <div class="card form-card">
+    <div class="form-header">
+      <div class="form-icon payable"><Wallet :size="20" :stroke-width="2.2" /></div>
+      <div>
+        <h2>Add Payable</h2>
+        <p>Record money you need to pay to a party</p>
       </div>
     </div>
-    <div class="field">
-      <label>Notes</label>
-      <textarea v-model="notes" rows="2" />
-    </div>
 
-    <DynamicFieldInput
-      v-for="f in customFields"
-      :key="f.id"
-      :field="f"
-      :model-value="f.type === 'FORMULA' ? undefined : fieldValues[f.key]"
-      :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
-      :force-validate="forceValidate"
-      @update:model-value="(v) => (fieldValues[f.key] = v)"
-    />
+    <form @submit.prevent="onSubmit">
+      <div class="field">
+        <label>Party / Mill<span class="req">*</span></label>
+        <select v-model="partyId" required :class="{ invalid: (touched.party || forceValidate) && !partyId }" @blur="touched.party = true">
+          <option value="" disabled>Select party…</option>
+          <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+        <FieldMessage v-if="(touched.party || forceValidate) && !partyId" type="error" message="Select a party" />
+      </div>
+      <div class="field">
+        <label>Amount payable<span class="req">*</span></label>
+        <input
+          v-model.number="originalAmount" type="number" step="0.01" min="0.01" required
+          :class="{ invalid: (touched.amount || forceValidate) && !originalAmount }" @blur="touched.amount = true"
+        />
+        <FieldMessage v-if="(touched.amount || forceValidate) && !originalAmount" type="error" message="Enter an amount greater than 0" />
+      </div>
+      <div class="field">
+        <label>Due date<span class="req">*</span></label>
+        <input
+          v-model="dueDate" type="date" required
+          :class="{ invalid: (touched.dueDate || forceValidate) && !dueDate }" @blur="touched.dueDate = true"
+        />
+        <FieldMessage v-if="(touched.dueDate || forceValidate) && !dueDate" type="error" message="Due date is required" />
+      </div>
+      <div class="field">
+        <label>Remind me</label>
+        <div class="chips">
+          <button
+            v-for="opt in reminderOptions" :key="opt.value" type="button"
+            class="chip" :class="{ active: reminderDays.includes(opt.value) }"
+            @click="toggleReminder(opt.value)"
+          ><BellRing :size="13" :stroke-width="2.2" />{{ opt.label }}</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea v-model="notes" rows="2" />
+      </div>
 
-    <p v-if="error" class="error">{{ error }}</p>
-    <button class="btn payable block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save payable' }}</span><ButtonSpinner v-if="saving" /></button>
-  </form>
-  <NuxtLink to="/settings/fields" class="manage-link">+ Manage payable fields</NuxtLink>
+      <DynamicFieldInput
+        v-for="f in customFields"
+        :key="f.id"
+        :field="f"
+        :model-value="f.type === 'FORMULA' ? undefined : fieldValues[f.key]"
+        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        :force-validate="forceValidate"
+        @update:model-value="(v) => (fieldValues[f.key] = v)"
+      />
+
+      <p v-if="error" class="error">{{ error }}</p>
+      <button class="btn payable block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save payable' }}</span><ButtonSpinner v-if="saving" /></button>
+    </form>
+    <NuxtLink to="/settings/fields" class="manage-link">
+      <Settings2 :size="14" :stroke-width="2.2" /> Manage payable fields
+    </NuxtLink>
+  </div>
 </template>
 
 <script setup lang="ts">
+import { Wallet, BellRing, Settings2 } from '@lucide/vue'
 const route = useRoute()
 const router = useRouter()
 const { data: parties } = await useFetch('/api/parties')
@@ -134,18 +147,32 @@ async function onSubmit() {
 </script>
 
 <style scoped>
+.form-card { padding: 20px; }
+.form-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.form-icon {
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.form-icon.payable { background: var(--payable-100); color: var(--payable-600); }
+.form-header h2 { font-size: 17px; margin: 0; }
+.form-header p { font-size: 13px; color: var(--ink-400); margin: 2px 0 0; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  border: 1px solid var(--line);
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid var(--line);
   background: white;
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 9px 14px;
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-700);
 }
 .chip.active { background: var(--ink-900); color: white; border-color: var(--ink-900); }
-.manage-link { display: block; text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600; }
+.manage-link {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600;
+}
 .req { color: var(--overdue-600); margin-left: 2px; }
 </style>

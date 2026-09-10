@@ -1,8 +1,16 @@
 <template>
-  <div>
+  <div class="card form-card">
+    <div class="form-header">
+      <div class="form-icon"><BookOpen :size="20" :stroke-width="2.2" /></div>
+      <div>
+        <h2>Add Ledger Entry</h2>
+        <p>Record a transaction in your business ledger</p>
+      </div>
+    </div>
+
     <form @submit.prevent="onSubmit">
       <div class="field">
-        <label for="date">Date</label>
+        <label for="date">Date<span class="req">*</span></label>
         <input id="date" v-model="date" type="date" required />
       </div>
       <div class="field">
@@ -31,11 +39,14 @@
       <button class="btn block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save entry' }}</span><ButtonSpinner v-if="saving" /></button>
     </form>
 
-    <NuxtLink to="/settings/fields" class="manage-link">+ Manage ledger fields</NuxtLink>
+    <NuxtLink to="/settings/fields" class="manage-link">
+      <Settings2 :size="14" :stroke-width="2.2" /> Manage ledger fields
+    </NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
+import { BookOpen, Settings2 } from '@lucide/vue'
 const date = ref(new Date().toISOString().slice(0, 10))
 const partyId = ref('')
 const description = ref('')
@@ -95,6 +106,20 @@ async function onSubmit() {
 </script>
 
 <style scoped>
+.form-card { padding: 20px; }
+.form-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.form-icon {
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  background: var(--paper-100); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.form-header h2 { font-size: 17px; margin: 0; }
+.form-header p { font-size: 13px; color: var(--ink-400); margin: 2px 0 0; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
-.manage-link { display: block; text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600; }
+.manage-link {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600;
+}
+.req { color: var(--overdue-600); margin-left: 2px; }
 </style>

@@ -1,35 +1,46 @@
 <template>
-  <form @submit.prevent="onSubmit">
-    <div class="field">
-      <label for="name">Party / Mill name<span class="req">*</span></label>
-      <input
-        id="name" v-model="name" type="text" required
-        :class="{ invalid: (touched.name || forceValidate) && !name.trim() }" @blur="touched.name = true"
-      />
-      <FieldMessage v-if="(touched.name || forceValidate) && !name.trim()" type="error" message="Party/Mill name is required" />
+  <div class="card form-card">
+    <div class="form-header">
+      <div class="form-icon"><Factory :size="20" :stroke-width="2.2" /></div>
+      <div>
+        <h2>Add Party</h2>
+        <p>Add a new Mill or trading partner</p>
+      </div>
     </div>
-    <div class="field">
-      <label for="phone">Phone<span class="req">*</span></label>
-      <input
-        id="phone" v-model="phone" type="tel" required
-        :class="{ invalid: (touched.phone || forceValidate) && !phone.trim() }" @blur="touched.phone = true"
-      />
-      <FieldMessage v-if="(touched.phone || forceValidate) && !phone.trim()" type="error" message="Phone number is required" />
-    </div>
-    <div class="field">
-      <label for="address">Address</label>
-      <textarea id="address" v-model="address" rows="2" />
-    </div>
-    <div class="field">
-      <label for="notes">Notes</label>
-      <textarea id="notes" v-model="notes" rows="2" />
-    </div>
-    <p v-if="error" class="error">{{ error }}</p>
-    <button class="btn block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save party' }}</span><ButtonSpinner v-if="saving" /></button>
-  </form>
+
+    <form @submit.prevent="onSubmit">
+      <div class="field">
+        <label for="name">Party / Mill name<span class="req">*</span></label>
+        <input
+          id="name" v-model="name" type="text" required
+          :class="{ invalid: (touched.name || forceValidate) && !name.trim() }" @blur="touched.name = true"
+        />
+        <FieldMessage v-if="(touched.name || forceValidate) && !name.trim()" type="error" message="Party/Mill name is required" />
+      </div>
+      <div class="field">
+        <label for="phone">Phone<span class="req">*</span></label>
+        <input
+          id="phone" v-model="phone" type="tel" required
+          :class="{ invalid: (touched.phone || forceValidate) && !phone.trim() }" @blur="touched.phone = true"
+        />
+        <FieldMessage v-if="(touched.phone || forceValidate) && !phone.trim()" type="error" message="Phone number is required" />
+      </div>
+      <div class="field">
+        <label for="address">Address</label>
+        <textarea id="address" v-model="address" rows="2" />
+      </div>
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea id="notes" v-model="notes" rows="2" />
+      </div>
+      <p v-if="error" class="error">{{ error }}</p>
+      <button class="btn block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save party' }}</span><ButtonSpinner v-if="saving" /></button>
+    </form>
+  </div>
 </template>
 
 <script setup lang="ts">
+import { Factory } from '@lucide/vue'
 const name = ref('')
 const phone = ref('')
 const address = ref('')
@@ -63,6 +74,16 @@ async function onSubmit() {
 </script>
 
 <style scoped>
+.form-card { padding: 20px; }
+.form-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.form-icon {
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  background: var(--paper-100); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.form-header h2 { font-size: 17px; margin: 0; }
+.form-header p { font-size: 13px; color: var(--ink-400); margin: 2px 0 0; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
 .req { color: var(--overdue-600); margin-left: 2px; }
 </style>
