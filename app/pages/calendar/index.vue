@@ -48,6 +48,9 @@ async function loadMonth() {
   try {
     const res = await $fetch('/api/calendar', { query: { from, to } })
     events.value = res.events
+  } catch (e: any) {
+    if (e?.response?.status === 401) return navigateTo('/login')
+    throw e
   } finally {
     pending.value = false
   }
