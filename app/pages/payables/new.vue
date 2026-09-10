@@ -1,19 +1,28 @@
 <template>
   <form @submit.prevent="onSubmit">
     <div class="field">
-      <label>Party / Mill</label>
-      <select v-model="partyId" required>
+      <label>Party / Mill<span class="req">*</span></label>
+      <select v-model="partyId" required :class="{ invalid: (touched.party || forceValidate) && !partyId }" @blur="touched.party = true">
         <option value="" disabled>Select party…</option>
         <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>
+      <FieldMessage v-if="(touched.party || forceValidate) && !partyId" type="error" message="Select a party" />
     </div>
     <div class="field">
-      <label>Amount payable</label>
-      <input v-model.number="originalAmount" type="number" step="0.01" min="0.01" required />
+      <label>Amount payable<span class="req">*</span></label>
+      <input
+        v-model.number="originalAmount" type="number" step="0.01" min="0.01" required
+        :class="{ invalid: (touched.amount || forceValidate) && !originalAmount }" @blur="touched.amount = true"
+      />
+      <FieldMessage v-if="(touched.amount || forceValidate) && !originalAmount" type="error" message="Enter an amount greater than 0" />
     </div>
     <div class="field">
-      <label>Due date</label>
-      <input v-model="dueDate" type="date" required />
+      <label>Due date<span class="req">*</span></label>
+      <input
+        v-model="dueDate" type="date" required
+        :class="{ invalid: (touched.dueDate || forceValidate) && !dueDate }" @blur="touched.dueDate = true"
+      />
+      <FieldMessage v-if="(touched.dueDate || forceValidate) && !dueDate" type="error" message="Due date is required" />
     </div>
     <div class="field">
       <label>Remind me</label>
@@ -36,6 +45,7 @@
       :field="f"
       :model-value="f.type === 'FORMULA' ? undefined : fieldValues[f.key]"
       :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+      :force-validate="forceValidate"
       @update:model-value="(v) => (fieldValues[f.key] = v)"
     />
 
@@ -53,6 +63,8 @@ const { data: customFieldsData } = await useFetch('/api/fields', { query: { enti
 const customFields = computed(() => customFieldsData.value ?? [])
 const fieldValues = reactive<Record<string, unknown>>({})
 const liveFormulas = useLiveFormulas(customFields, fieldValues)
+const forceValidate = ref(false)
+const touched = reactive({ party: false, amount: false, dueDate: false })
 
 watch(customFields, (list) => {
   for (const f of list) {
@@ -83,7 +95,20 @@ function toggleReminder(v: number) {
   else reminderDays.value.push(v)
 }
 
+function hasMissingRequiredField() {
+  return customFields.value.some(f => {
+    if (!f.isRequired || f.type === 'FORMULA') return false
+    const v = fieldValues[f.key]
+    return v === undefined || v === null || v === ''
+  })
+}
+
 async function onSubmit() {
+  forceValidate.value = true
+  if (!partyId.value || !originalAmount.value || !dueDate.value || hasMissingRequiredField()) {
+    error.value = 'Please fill in all required fields, highlighted below.'
+    return
+  }
   saving.value = true
   error.value = ''
   try {
@@ -122,4 +147,5 @@ async function onSubmit() {
 }
 .chip.active { background: var(--ink-900); color: white; border-color: var(--ink-900); }
 .manage-link { display: block; text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600; }
+.req { color: var(--overdue-600); margin-left: 2px; }
 </style>

@@ -82,3 +82,19 @@ export async function getComputedFieldValues(fields: FieldDefinition[], recordId
   }
   return result
 }
+
+/** A required field is "missing" if its value is absent, null, or an
+ *  empty string — NOT merely if the key doesn't exist on the payload.
+ *  (Bug fix: the previous check only looked at key presence, so a field
+ *  explicitly submitted as '' — which every dynamic-field form does,
+ *  since inputs are seeded to '' rather than left undefined — always
+ *  passed as "present" even when genuinely empty.) BOOLEAN false is a
+ *  valid, deliberate value and is never treated as missing. */
+export function findMissingRequiredFields(fields: FieldDefinition[], values: Record<string, unknown>): FieldDefinition[] {
+  return fields.filter(f => {
+    if (!f.isRequired || f.type === 'FORMULA') return false
+    const v = values[f.key]
+    if (f.type === 'BOOLEAN') return v === undefined || v === null
+    return v === undefined || v === null || v === ''
+  })
+}

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { requireSession } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
-import { getActiveFields, setFieldValues, getComputedFieldValues } from '../../utils/fields'
+import { getActiveFields, setFieldValues, getComputedFieldValues, findMissingRequiredFields } from '../../utils/fields'
 import { logAudit } from '../../utils/audit'
 
 const schema = z.object({
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
 
   const fieldDefs = await getActiveFields(session.businessId, 'TRANSACTION')
 
-  const missingRequired = fieldDefs.filter(f => f.isRequired && f.type !== 'FORMULA' && !(f.key in fieldValues))
+  const missingRequired = findMissingRequiredFields(fieldDefs, fieldValues)
   if (missingRequired.length) {
     throw createError({ statusCode: 400, statusMessage: `Missing required field(s): ${missingRequired.map(f => f.label).join(', ')}` })
   }

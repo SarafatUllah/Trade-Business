@@ -4,33 +4,33 @@
 
     <input
       v-if="['TEXT'].includes(field.type)"
-      :id="field.key" type="text" :value="modelValue as string"
-      @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      :id="field.key" type="text" :value="modelValue as string" :class="{ invalid: showError }"
+      @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)" @blur="touched = true"
     />
     <textarea
       v-else-if="field.type === 'LONG_TEXT'"
-      :id="field.key" rows="3" :value="modelValue as string"
-      @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+      :id="field.key" rows="3" :value="modelValue as string" :class="{ invalid: showError }"
+      @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)" @blur="touched = true"
     />
     <input
       v-else-if="['NUMBER', 'CURRENCY'].includes(field.type)"
-      :id="field.key" type="number" step="0.01" :value="modelValue as number"
-      @input="emit('update:modelValue', ($event.target as HTMLInputElement).valueAsNumber)"
+      :id="field.key" type="number" step="0.01" :value="modelValue as number" :class="{ invalid: showError }"
+      @input="emit('update:modelValue', ($event.target as HTMLInputElement).valueAsNumber)" @blur="touched = true"
     />
     <input
       v-else-if="field.type === 'DATE'"
-      :id="field.key" type="date" :value="modelValue as string"
-      @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      :id="field.key" type="date" :value="modelValue as string" :class="{ invalid: showError }"
+      @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)" @blur="touched = true"
     />
     <input
       v-else-if="field.type === 'DATETIME'"
-      :id="field.key" type="datetime-local" :value="modelValue as string"
-      @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      :id="field.key" type="datetime-local" :value="modelValue as string" :class="{ invalid: showError }"
+      @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)" @blur="touched = true"
     />
     <select
       v-else-if="['DROPDOWN', 'STATUS'].includes(field.type)"
-      :id="field.key" :value="modelValue as string"
-      @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
+      :id="field.key" :value="modelValue as string" :class="{ invalid: showError }"
+      @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)" @blur="touched = true"
     >
       <option value="">Select…</option>
       <option v-for="opt in parsedOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -46,6 +46,8 @@
       {{ computedDisplay }}
       <small>calculated</small>
     </div>
+
+    <FieldMessage v-if="showError" type="error" :message="`${field.label} is required`" />
   </div>
 </template>
 
@@ -54,13 +56,25 @@ const props = defineProps<{
   field: { key: string; label: string; type: string; isRequired?: boolean; options?: string | null }
   modelValue: unknown
   computedValue?: unknown
+  forceValidate?: boolean
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
+
+const touched = ref(false)
 
 const parsedOptions = computed<{ value: string; label: string }[]>(() => {
   if (!props.field.options) return []
   try { return JSON.parse(props.field.options) } catch { return [] }
 })
+
+const isEmpty = computed(() => {
+  const v = props.modelValue
+  return v === undefined || v === null || v === '' || (typeof v === 'number' && Number.isNaN(v))
+})
+
+const showError = computed(() =>
+  !!props.field.isRequired && isEmpty.value && (touched.value || !!props.forceValidate)
+)
 
 const computedDisplay = computed(() => {
   const v = props.computedValue

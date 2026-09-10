@@ -108,8 +108,7 @@ describe('formula engine: validation', () => {
   })
 })
 
-describe('field key rename cascade (word-boundary safety)', () => {
-  // Mirrors the regex used in server/api/fields/[id].patch.ts when a
+describe('field key rename cascade (word-boundary safety)', () => {  // Mirrors the regex used in server/api/fields/[id].patch.ts when a
   // field's key is renamed: dependent formulas must be updated safely,
   // without accidentally matching a key that is a substring of another
   // (e.g. renaming "w" must not corrupt a formula using "weight").

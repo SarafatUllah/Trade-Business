@@ -23,6 +23,7 @@
         :field="f"
         :model-value="f.type === 'FORMULA' ? undefined : values[f.key]"
         :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        :force-validate="forceValidate"
         @update:model-value="(v) => (values[f.key] = v)"
       />
 
@@ -41,6 +42,7 @@ const description = ref('')
 const values = reactive<Record<string, unknown>>({})
 const saving = ref(false)
 const error = ref('')
+const forceValidate = ref(false)
 
 const { data: parties } = await useFetch('/api/parties')
 const { data: fieldsData } = await useFetch('/api/fields', { query: { entity: 'TRANSACTION' } })
@@ -62,7 +64,20 @@ watch(fields, (list) => {
 
 const router = useRouter()
 
+function hasMissingRequiredField() {
+  return fields.value.some(f => {
+    if (!f.isRequired || f.type === 'FORMULA') return false
+    const v = values[f.key]
+    return v === undefined || v === null || v === ''
+  })
+}
+
 async function onSubmit() {
+  forceValidate.value = true
+  if (hasMissingRequiredField()) {
+    error.value = 'Please fill in all required fields, highlighted below.'
+    return
+  }
   saving.value = true
   error.value = ''
   try {
