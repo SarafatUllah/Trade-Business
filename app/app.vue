@@ -1,6 +1,7 @@
 <template>
   <div>
-    <NuxtLoadingIndicator color="#B5651D" :height="3" />
+    <NuxtLoadingIndicator color="#4361EE" :height="3" />
+    <PageLoadingOverlay />
     <NuxtRouteAnnouncer />
     <NuxtLayout>
       <NuxtPage />

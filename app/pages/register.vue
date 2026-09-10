@@ -22,7 +22,7 @@
         <small style="color: var(--ink-400)">At least 8 characters</small>
       </div>
       <p v-if="error" class="error">{{ error }}</p>
-      <button class="btn block" type="submit" :disabled="loading">{{ loading ? 'Creating…' : 'Create account' }}</button>
+      <button class="btn block" type="submit" :disabled="loading"><span>{{ loading ? 'Creating…' : 'Create account' }}</span><ButtonSpinner v-if="loading" /></button>
     </form>
 
     <p class="switch">Already have an account? <NuxtLink to="/login">Sign in</NuxtLink></p>

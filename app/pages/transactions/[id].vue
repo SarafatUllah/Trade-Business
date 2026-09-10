@@ -50,7 +50,7 @@
         :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
         @update:model-value="(v) => (editValues[f.key] = v)"
       />
-      <button class="btn block" type="submit" :disabled="saving">{{ saving ? 'Saving…' : 'Save changes' }}</button>
+      <button class="btn block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save changes' }}</span><ButtonSpinner v-if="saving" /></button>
     </form>
   </div>
 </template>

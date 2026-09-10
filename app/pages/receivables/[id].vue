@@ -23,7 +23,7 @@
         </select>
       </div>
       <p v-if="collectError" class="error">{{ collectError }}</p>
-      <button class="btn receivable block" type="submit" :disabled="collecting">{{ collecting ? 'Recording…' : 'Record collection' }}</button>
+      <button class="btn receivable block" type="submit" :disabled="collecting"><span>{{ collecting ? 'Recording…' : 'Record collection' }}</span><ButtonSpinner v-if="collecting" /></button>
     </form>
     <p v-else class="settled">✓ Fully received — reminders stopped.</p>
 

@@ -41,7 +41,8 @@
 
     <p v-if="error" class="error">{{ error }}</p>
     <button class="btn block" :disabled="!partyId || generating" @click="onGenerate">
-      {{ generating ? 'Generating…' : 'Preview & Generate Invoice' }}
+      <span>{{ generating ? 'Generating…' : 'Preview & Generate Invoice' }}</span>
+      <ButtonSpinner v-if="generating" />
     </button>
   </div>
 </template>

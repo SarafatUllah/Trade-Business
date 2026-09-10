@@ -13,7 +13,7 @@
         <input id="password" v-model="password" type="password" required autocomplete="current-password" />
       </div>
       <p v-if="error" class="error">{{ error }}</p>
-      <button class="btn block" type="submit" :disabled="loading">{{ loading ? 'Signing in…' : 'Sign in' }}</button>
+      <button class="btn block" type="submit" :disabled="loading"><span>{{ loading ? 'Signing in…' : 'Sign in' }}</span><ButtonSpinner v-if="loading" /></button>
     </form>
 
     <p class="switch">New here? <NuxtLink to="/register">Create a business account</NuxtLink></p>

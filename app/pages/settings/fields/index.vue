@@ -79,7 +79,7 @@
           <p v-if="editError" class="error">{{ editError }}</p>
           <div class="edit-actions">
             <button class="btn secondary" type="button" @click="editingId = null">Cancel</button>
-            <button class="btn" type="button" :disabled="editSaving" @click="saveEdit(f)">{{ editSaving ? 'Saving…' : 'Save changes' }}</button>
+            <button class="btn" type="button" :disabled="editSaving" @click="saveEdit(f)"><span>{{ editSaving ? 'Saving…' : 'Save changes' }}</span><ButtonSpinner v-if="editSaving" /></button>
             <button class="btn danger" type="button" @click="archiveField(f)">Archive</button>
           </div>
         </div>
@@ -139,7 +139,7 @@
       <label class="checkbox-row"><input v-model="form.isFilterable" type="checkbox" /> <span>Usable as filter</span></label>
 
       <p v-if="error" class="error">{{ error }}</p>
-      <button class="btn block" type="submit" :disabled="saving">{{ saving ? 'Saving…' : 'Add field' }}</button>
+      <button class="btn block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Add field' }}</span><ButtonSpinner v-if="saving" /></button>
     </form>
   </div>
 </template>

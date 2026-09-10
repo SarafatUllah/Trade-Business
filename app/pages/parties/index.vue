@@ -52,7 +52,7 @@ const filtered = computed(() => {
 .amounts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
 .fab {
   position: fixed; right: 20px; bottom: calc(88px + env(safe-area-inset-bottom));
-  width: 56px; height: 56px; border-radius: 50%; background: var(--ink-900); color: white;
+  width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: white;
   font-size: 28px; display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 12px rgba(22,33,43,0.3); z-index: 15;
 }

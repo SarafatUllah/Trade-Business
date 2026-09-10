@@ -27,7 +27,7 @@
       />
 
       <p v-if="error" class="error">{{ error }}</p>
-      <button class="btn block" type="submit" :disabled="saving">{{ saving ? 'Saving…' : 'Save entry' }}</button>
+      <button class="btn block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save entry' }}</span><ButtonSpinner v-if="saving" /></button>
     </form>
 
     <NuxtLink to="/settings/fields" class="manage-link">+ Manage ledger fields</NuxtLink>

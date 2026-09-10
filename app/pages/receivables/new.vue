@@ -30,7 +30,7 @@
       <textarea v-model="notes" rows="2" />
     </div>
     <p v-if="error" class="error">{{ error }}</p>
-    <button class="btn receivable block" type="submit" :disabled="saving">{{ saving ? 'Saving…' : 'Save receivable' }}</button>
+    <button class="btn receivable block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save receivable' }}</span><ButtonSpinner v-if="saving" /></button>
   </form>
 </template>
 

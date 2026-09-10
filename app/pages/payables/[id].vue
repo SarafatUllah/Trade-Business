@@ -23,7 +23,7 @@
         </select>
       </div>
       <p v-if="payError" class="error">{{ payError }}</p>
-      <button class="btn payable block" type="submit" :disabled="paying">{{ paying ? 'Recording…' : 'Record payment' }}</button>
+      <button class="btn payable block" type="submit" :disabled="paying"><span>{{ paying ? 'Recording…' : 'Record payment' }}</span><ButtonSpinner v-if="paying" /></button>
     </form>
     <p v-else class="settled">✓ Fully paid — reminders stopped.</p>
 

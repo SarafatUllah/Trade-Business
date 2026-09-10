@@ -153,7 +153,7 @@ function display(v: unknown) {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--ink-900);
+  background: var(--accent);
   color: white;
   font-size: 28px;
   display: flex;
