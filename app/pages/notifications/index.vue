@@ -8,6 +8,7 @@
       </span>
       <ChevronRight :size="18" :stroke-width="2.2" class="push-chevron" />
     </button>
+    <p v-if="pushStatus" class="push-status">{{ pushStatus }}</p>
     <p v-if="pushError" class="push-error"><CircleAlert :size="14" :stroke-width="2.2" /> {{ pushError }}</p>
     <p v-else-if="pushChecked && !pushSupported && !pushEnabled" class="push-error"><CircleAlert :size="14" :stroke-width="2.2" /> This browser doesn't support push notifications. On iPhone, you must add this site to your Home Screen first (Share → Add to Home Screen), then open it from there.</p>
 
@@ -72,35 +73,57 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
 }
 
+const pushError = ref('')
+const pushStatus = ref('')
+
 async function enablePush() {
   pushError.value = ''
+  pushStatus.value = 'Step 1/5: checking browser support…'
   try {
+    if (!('Notification' in window)) {
+      pushError.value = 'This browser has no Notification API at all (unusual — try Safari from the Home Screen icon specifically).'
+      return
+    }
+
+    pushStatus.value = 'Step 2/5: requesting permission…'
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
       pushError.value = `Browser permission was "${permission}", not granted. Check your phone's notification settings for this app/site.`
       return
     }
+
+    pushStatus.value = 'Step 3/5: waiting for service worker…'
     const reg = await navigator.serviceWorker.ready
     const vapidKey = config.public.vapidPublicKey
     if (!vapidKey) {
       pushError.value = 'Push is not configured on the server yet (missing VAPID keys) — this needs to be added and the app redeployed.'
       return
     }
+
+    pushStatus.value = 'Step 4/5: subscribing with the push service…'
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidKey)
     })
+
+    pushStatus.value = 'Step 5/5: saving subscription…'
     await $fetch('/api/push/subscribe', { method: 'POST', body: sub.toJSON() })
     pushEnabled.value = true
+    pushStatus.value = ''
   } catch (err: any) {
     // Surfaced directly in the UI (not just the console) since mobile
     // Safari gives no easy way to check console output.
-    pushError.value = `Could not enable push: ${err?.message || err?.name || 'unknown error'}`
+    pushError.value = `Failed at "${pushStatus.value}" — ${err?.message || err?.name || JSON.stringify(err) || 'unknown error'}`
     console.error('Push subscription failed', err)
+  } finally {
+    if (!pushEnabled.value) {
+      // Leave the last status visible alongside the error so we can see
+      // exactly which step it reached, rather than clearing it.
+    } else {
+      pushStatus.value = ''
+    }
   }
 }
-
-const pushError = ref('')
 
 const testingPush = ref(false)
 const testResult = ref('')
@@ -144,6 +167,7 @@ async function sendTestPush() {
 .push-copy strong { font-size: 14px; }
 .push-copy small { opacity: 0.85; font-size: 12px; }
 .push-chevron { opacity: 0.8; flex-shrink: 0; }
+.push-status { font-size: 12px; color: var(--ink-400); margin: -8px 0 8px; }
 .push-error {
   display: flex; align-items: flex-start; gap: 6px;
   font-size: 13px; color: var(--overdue-600);
