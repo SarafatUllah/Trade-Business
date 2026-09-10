@@ -1,6 +1,6 @@
 <template>
   <div v-if="data">
-    <div class="card summary payable-bg">
+    <div class="card full-bleed summary payable-bg">
       <small>Payable to {{ data.party.name }}</small>
       <strong class="num">{{ format(data.remaining) }} <span class="of">of {{ format(data.originalAmount) }}</span></strong>
       <span class="pill" :class="data.status === 'OVERDUE' ? 'overdue' : 'payable'">{{ data.status.replace('_', ' ') }}</span>
@@ -8,7 +8,7 @@
       <p v-if="data.notes" class="core-notes">{{ data.notes }}</p>
     </div>
 
-    <form v-if="data.remaining > 0" class="card pay-form" @submit.prevent="onPay">
+    <form v-if="data.remaining > 0" class="card full-bleed pay-form" @submit.prevent="onPay">
       <h3>Record payment</h3>
       <div class="field">
         <label>Amount paid</label>
@@ -33,7 +33,7 @@
       <button class="btn secondary small" @click="toggleEdit">{{ editing ? 'Cancel' : 'Edit' }}</button>
     </div>
 
-    <div v-if="!editing" class="card field-list">
+    <div v-if="!editing" class="card full-bleed field-list">
       <div class="row">
         <span class="label">Amount payable</span>
         <span class="value num">{{ format(data.originalAmount) }}</span>
@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <form v-else class="card edit-form" @submit.prevent="onSaveDetails">
+    <form v-else class="card full-bleed edit-form" @submit.prevent="onSaveDetails">
       <div class="field">
         <label>Amount payable<span class="req">*</span></label>
         <input
@@ -88,7 +88,7 @@
     </form>
 
     <h3 class="section-title">Payment history</h3>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <p v-if="!data.payments.length" class="empty-state">No payments yet.</p>
       <div v-for="p in data.payments" :key="p.id" class="ledger-row" :class="{ overdue: p.reversedAt }">
         <div class="row-main">

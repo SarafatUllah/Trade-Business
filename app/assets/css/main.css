@@ -207,3 +207,24 @@ a.ledger-row:active, a.tx-card:active {
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
 }
+
+/* Full-bleed utility: cancels the page container's side padding so a
+   card runs to the actual screen edges on mobile, reverting to a normal
+   inset+rounded card on wider viewports where full-bleed doesn't apply
+   against the centered layout. */
+.full-bleed {
+  margin-left: -16px;
+  margin-right: -16px;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+@media (min-width: 900px) {
+  .full-bleed {
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: var(--radius-md);
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+}

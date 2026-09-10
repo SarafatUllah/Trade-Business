@@ -1,6 +1,6 @@
 <template>
   <div v-if="data">
-    <div class="card summary receivable-bg">
+    <div class="card full-bleed summary receivable-bg">
       <small>Receivable from {{ data.party.name }}</small>
       <strong class="num">{{ format(data.remaining) }} <span class="of">of {{ format(data.originalAmount) }}</span></strong>
       <span class="pill" :class="data.status === 'OVERDUE' ? 'overdue' : 'receivable'">{{ data.status.replace('_', ' ') }}</span>
@@ -8,7 +8,7 @@
       <p v-if="data.notes" class="core-notes">{{ data.notes }}</p>
     </div>
 
-    <form v-if="data.remaining > 0" class="card pay-form" @submit.prevent="onCollect">
+    <form v-if="data.remaining > 0" class="card full-bleed pay-form" @submit.prevent="onCollect">
       <h3>Record collection</h3>
       <div class="field">
         <label>Amount received</label>
@@ -33,7 +33,7 @@
       <button class="btn secondary small" @click="toggleEdit">{{ editing ? 'Cancel' : 'Edit' }}</button>
     </div>
 
-    <div v-if="!editing" class="card field-list">
+    <div v-if="!editing" class="card full-bleed field-list">
       <div class="row">
         <span class="label">Amount receivable</span>
         <span class="value num">{{ format(data.originalAmount) }}</span>
@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <form v-else class="card edit-form" @submit.prevent="onSaveDetails">
+    <form v-else class="card full-bleed edit-form" @submit.prevent="onSaveDetails">
       <div class="field">
         <label>Amount receivable<span class="req">*</span></label>
         <input
@@ -88,7 +88,7 @@
     </form>
 
     <h3 class="section-title">Collection history</h3>
-    <div class="card list-card">
+    <div class="card full-bleed list-card">
       <p v-if="!data.collections.length" class="empty-state">No collections yet.</p>
       <div v-for="c in data.collections" :key="c.id" class="ledger-row" :class="{ overdue: c.reversedAt }">
         <div class="row-main">
