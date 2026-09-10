@@ -9,6 +9,7 @@
       <NuxtLink to="/admin/users" class="nav-item" :class="{ active: route.path.startsWith('/admin/users') }">Users</NuxtLink>
       <NuxtLink to="/admin/codes" class="nav-item" :class="{ active: route.path.startsWith('/admin/codes') }">Codes</NuxtLink>
       <NuxtLink v-if="admin.isSuperAdmin" to="/admin/admins" class="nav-item" :class="{ active: route.path.startsWith('/admin/admins') }">Sub-Admins</NuxtLink>
+      <NuxtLink to="/admin/account" class="nav-item" :class="{ active: route.path.startsWith('/admin/account') }">My Account</NuxtLink>
     </nav>
     <main class="admin-content container">
       <slot />

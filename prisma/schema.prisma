@@ -494,7 +494,7 @@ model PlatformAdmin {
   canManageSubAdmins  Boolean @default(false)
 
   createdById String?
-  createdBy   PlatformAdmin?  @relation("AdminCreatedAdmins", fields: [createdById], references: [id])
+  createdBy   PlatformAdmin?  @relation("AdminCreatedAdmins", fields: [createdById], references: [id], onDelete: SetNull)
   createdAdmins PlatformAdmin[] @relation("AdminCreatedAdmins")
 
   createdAt DateTime @default(now())
@@ -521,8 +521,8 @@ model SignupCode {
   trialDays Int? // only meaningful for FREE_TRIAL
   notes     String? // e.g. "bKash txn 8827..., 1200tk, 6 months"
 
-  createdByAdminId String
-  createdByAdmin   PlatformAdmin @relation(fields: [createdByAdminId], references: [id])
+  createdByAdminId String?
+  createdByAdmin   PlatformAdmin? @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
 
   isRevoked Boolean   @default(false)
   usedAt    DateTime?
@@ -541,8 +541,8 @@ model SignupCode {
 // aren't scoped to one business's own history view.
 model PlatformAuditLog {
   id        String   @id @default(cuid())
-  adminId   String
-  admin     PlatformAdmin @relation(fields: [adminId], references: [id])
+  adminId   String?
+  admin     PlatformAdmin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
   action    String // e.g. "ACTIVATE_BUSINESS", "DEACTIVATE_BUSINESS", "DELETE_BUSINESS", "CREATE_CODE", "CREATE_SUB_ADMIN"
   targetType String? // e.g. "Business", "SignupCode", "PlatformAdmin"
   targetId  String?

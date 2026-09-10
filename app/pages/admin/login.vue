@@ -16,6 +16,7 @@
       <p v-if="error" class="error">{{ error }}</p>
       <button class="btn block" type="submit" :disabled="loading"><span>{{ loading ? 'Signing in…' : 'Sign in' }}</span><ButtonSpinner v-if="loading" /></button>
     </form>
+    <p class="switch"><NuxtLink to="/admin/forgot-password">Forgot password?</NuxtLink></p>
   </div>
 </template>
 
@@ -55,4 +56,6 @@ async function onSubmit() {
 h1 { font-size: 26px; margin-bottom: 4px; }
 .subtitle { color: var(--ink-400); margin: 0 0 24px; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
+.switch { text-align: center; margin-top: 20px; font-size: 14px; }
+.switch a { color: var(--focus); font-weight: 600; }
 </style>
