@@ -9,19 +9,23 @@
       </p>
     </div>
 
-    <div class="card table-wrap">
-      <table>
-        <thead>
-          <tr><th v-for="c in data.columns" :key="c.key">{{ c.label }}</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, i) in data.rows" :key="i">
-            <td v-for="c in data.columns" :key="c.key">{{ display(row[c.key]) }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <h3 class="section-title">Entries ({{ data.rows.length }})</h3>
+
+    <!-- Deliberately NOT a <table>. A table's intrinsic minimum width is
+         driven by its columns, which on a narrow phone forces the whole
+         page column wider than the viewport — the layout can't help but
+         overflow no matter how the wrapper is styled. Rendering each
+         entry as a stacked label/value card removes the wide-content
+         problem at its source instead of trying to contain it. -->
+    <div v-for="(row, i) in data.rows" :key="i" class="card entry-card">
+      <div class="entry-index">#{{ i + 1 }}</div>
+      <div v-for="c in data.columns" :key="c.key" class="entry-row">
+        <span class="entry-label">{{ c.label }}</span>
+        <span class="entry-value num">{{ display(row[c.key]) }}</span>
+      </div>
     </div>
 
+    <h3 class="section-title">Summary</h3>
     <div class="card summary">
       <div class="row"><span class="label">Total Amount</span><span class="value num">{{ format(data.summary?.totalAmount ?? 0) }}</span></div>
       <div class="row"><span class="label">Total Paid</span><span class="value num">{{ format(data.summary?.totalPaid ?? 0) }}</span></div>
@@ -45,25 +49,49 @@ function formatDate(d: string | Date) {
 function display(v: unknown) {
   if (v === null || v === undefined || v === '') return '—'
   if (typeof v === 'number') return v.toLocaleString('en-US', { maximumFractionDigits: 2 })
-  return String(v)
+  const s = String(v)
+  // Snapshot values keep raw ISO dates; show them readably rather than
+  // as "2026-09-01T00:00:00.000Z".
+  if (/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(s)) {
+    return new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+  return s
 }
 </script>
 
 <style scoped>
-.invoice-head { margin-bottom: 12px; }
+.invoice-head { margin-bottom: 16px; }
 .invoice-head h2 { font-size: 20px; }
 .invoice-head p { margin: 2px 0 0; }
 .muted { color: var(--ink-400); font-size: 13px; }
-.table-wrap { overflow-x: auto; margin-bottom: 12px; -webkit-overflow-scrolling: touch; max-width: 100%; }
-table { width: 100%; border-collapse: collapse; min-width: 480px; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+
+.section-title { font-size: 15px; margin: 0 0 8px; color: var(--ink-700); }
+
+.entry-card { position: relative; margin-bottom: 12px; padding-top: 14px; }
+.entry-index {
+  font-size: 11px; font-weight: 700; color: var(--ink-400);
+  margin-bottom: 8px;
+}
+.entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+.entry-row:last-child { border-bottom: none; }
+.entry-label { color: var(--ink-400); font-size: 13px; min-width: 0; }
+.entry-value { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+
+.summary { margin-bottom: 16px; }
 .summary .row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 6px 0;
+  padding: 7px 0;
 }
 .summary .label { color: var(--ink-700); }
-.summary .value { color: var(--ink-900); text-align: right; white-space: nowrap; font-weight: 700; }
+.summary .value { text-align: right; font-weight: 700; }
 </style>

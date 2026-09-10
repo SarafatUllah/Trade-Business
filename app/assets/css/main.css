@@ -111,6 +111,12 @@ svg.lucide { display: block; flex-shrink: 0; }
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   padding: 18px;
+  /* A card must never be widened by its own content — anything too wide
+     (a data table, a long unbroken string) has to scroll or wrap inside
+     the card, not stretch it past the screen edge. */
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
@@ -180,7 +186,12 @@ svg.lucide { display: block; flex-shrink: 0; }
   color: var(--ink-400);
 }
 
-.container { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+/* width:100% + max-width:100% are load-bearing here, not redundant: as a
+   stretched flex item, this box's width can otherwise be resolved from
+   its content's intrinsic size, letting a wide descendant widen the whole
+   page column rather than overflowing within it. Pinning the width to the
+   parent removes that possibility entirely. */
+.container { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 16px; }
 
 @media (min-width: 900px) {
   .container { max-width: 960px; }
