@@ -27,6 +27,16 @@
     </form>
     <p v-else class="settled">✓ Fully paid — reminders stopped.</p>
 
+    <template v-if="data.fieldDefs?.length">
+      <h3 class="section-title">Details</h3>
+      <div class="card field-list">
+        <div v-for="f in data.fieldDefs" :key="f.id" class="row">
+          <span class="label">{{ f.label }}</span>
+          <span class="value num">{{ display(data.fields[f.key]) }}</span>
+        </div>
+      </div>
+    </template>
+
     <h3 class="section-title">Payment history</h3>
     <div class="card list-card">
       <p v-if="!data.payments.length" class="empty-state">No payments yet.</p>
@@ -79,6 +89,11 @@ async function reverse(paymentId: string) {
 function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+function display(v: unknown) {
+  if (v === null || v === undefined || v === '') return '—'
+  if (typeof v === 'number') return v.toLocaleString('en-US', { maximumFractionDigits: 2 })
+  return String(v)
+}
 </script>
 
 <style scoped>
@@ -92,6 +107,10 @@ function formatDate(d: string | Date) {
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
 .settled { text-align: center; color: var(--receivable-600); font-weight: 600; padding: 16px 0; }
 .section-title { font-size: 15px; margin: 16px 0 8px; color: var(--ink-700); }
+.field-list { margin-bottom: 16px; }
+.field-list .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.field-list .row:last-child { border-bottom: none; }
+.field-list .label { color: var(--ink-400); font-size: 14px; }
 .list-card { padding: 4px 12px; }
 .row-main { display: flex; flex-direction: column; gap: 2px; }
 .row-main small { color: var(--ink-400); }

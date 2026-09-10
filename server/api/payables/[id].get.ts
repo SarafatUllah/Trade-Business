@@ -2,6 +2,7 @@ import { requireSession } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
 import { computePayablePaid, computePayableRemaining, computePayableStatus } from '../../utils/status'
 import { toApiNumber } from '../../utils/money'
+import { getActiveFields, getComputedFieldValues } from '../../utils/fields'
 
 export default defineEventHandler(async (event) => {
   const session = requireSession(event)
@@ -17,6 +18,9 @@ export default defineEventHandler(async (event) => {
   })
   if (!payable) throw createError({ statusCode: 404, statusMessage: 'Payable not found' })
 
+  const fieldDefs = await getActiveFields(session.businessId, 'PAYABLE')
+  const fields = fieldDefs.length ? await getComputedFieldValues(fieldDefs, payable.id) : {}
+
   return {
     id: payable.id,
     party: payable.party,
@@ -26,6 +30,8 @@ export default defineEventHandler(async (event) => {
     dueDate: payable.dueDate,
     status: computePayableStatus(payable),
     notes: payable.notes,
+    fields,
+    fieldDefs,
     payments: payable.payments.map(p => ({
       id: p.id,
       amount: toApiNumber(p.amount),

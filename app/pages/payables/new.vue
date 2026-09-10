@@ -29,15 +29,37 @@
       <label>Notes</label>
       <textarea v-model="notes" rows="2" />
     </div>
+
+    <DynamicFieldInput
+      v-for="f in customFields"
+      :key="f.id"
+      :field="f"
+      :model-value="f.type === 'FORMULA' ? undefined : fieldValues[f.key]"
+      :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+      @update:model-value="(v) => (fieldValues[f.key] = v)"
+    />
+
     <p v-if="error" class="error">{{ error }}</p>
     <button class="btn payable block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save payable' }}</span><ButtonSpinner v-if="saving" /></button>
   </form>
+  <NuxtLink to="/settings/fields" class="manage-link">+ Manage payable fields</NuxtLink>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
 const { data: parties } = await useFetch('/api/parties')
+const { data: customFieldsData } = await useFetch('/api/fields', { query: { entity: 'PAYABLE' } })
+const customFields = computed(() => customFieldsData.value ?? [])
+const fieldValues = reactive<Record<string, unknown>>({})
+const liveFormulas = useLiveFormulas(customFields, fieldValues)
+
+watch(customFields, (list) => {
+  for (const f of list) {
+    if (f.type === 'FORMULA') continue
+    if (!(f.key in fieldValues)) fieldValues[f.key] = f.type === 'BOOLEAN' ? false : ''
+  }
+}, { immediate: true })
 
 const partyId = ref((route.query.partyId as string) || '')
 const transactionId = (route.query.transactionId as string) || undefined
@@ -73,7 +95,8 @@ async function onSubmit() {
         dueDate: dueDate.value,
         notes: notes.value || undefined,
         transactionId,
-        reminderDaysBefore: reminderDays.value
+        reminderDaysBefore: reminderDays.value,
+        fields: fieldValues
       }
     })
     router.push(`/payables/${payable.id}`)
@@ -98,4 +121,5 @@ async function onSubmit() {
   color: var(--ink-700);
 }
 .chip.active { background: var(--ink-900); color: white; border-color: var(--ink-900); }
+.manage-link { display: block; text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600; }
 </style>

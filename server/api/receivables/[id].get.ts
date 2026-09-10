@@ -2,6 +2,7 @@ import { requireSession } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
 import { computeReceivableReceived, computeReceivableRemaining, computeReceivableStatus } from '../../utils/status'
 import { toApiNumber } from '../../utils/money'
+import { getActiveFields, getComputedFieldValues } from '../../utils/fields'
 
 export default defineEventHandler(async (event) => {
   const session = requireSession(event)
@@ -17,6 +18,9 @@ export default defineEventHandler(async (event) => {
   })
   if (!receivable) throw createError({ statusCode: 404, statusMessage: 'Receivable not found' })
 
+  const fieldDefs = await getActiveFields(session.businessId, 'RECEIVABLE')
+  const fields = fieldDefs.length ? await getComputedFieldValues(fieldDefs, receivable.id) : {}
+
   return {
     id: receivable.id,
     party: receivable.party,
@@ -26,6 +30,8 @@ export default defineEventHandler(async (event) => {
     expectedDate: receivable.expectedDate,
     status: computeReceivableStatus(receivable),
     notes: receivable.notes,
+    fields,
+    fieldDefs,
     collections: receivable.collections.map(c => ({
       id: c.id,
       amount: toApiNumber(c.amount),
