@@ -28,6 +28,13 @@ export default defineEventHandler(async (event) => {
   const membership = user.memberships[0]
   if (!membership) throw createError({ statusCode: 403, statusMessage: 'No business associated with this account' })
 
+  if (membership.business.accountStatus === 'DEACTIVATED') {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'This account has been deactivated. Please contact your administrator to reactivate it (e.g. after completing payment or your free trial has ended).'
+    })
+  }
+
   const token = signSession(event, { userId: user.id, businessId: membership.businessId, role: membership.role }, remember)
   setSessionCookie(event, token, remember)
 

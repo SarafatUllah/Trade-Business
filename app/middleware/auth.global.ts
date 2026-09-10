@@ -11,6 +11,11 @@
 // expired, or missing session there is rejected with a 401 regardless of
 // what this flag cookie says.
 export default defineNuxtRouteMiddleware((to) => {
+  // The admin panel is a completely separate auth realm with its own
+  // middleware (see admin.global.ts) — never gate it with the business
+  // session check.
+  if (to.path.startsWith('/admin')) return
+
   const publicPages = ['/login', '/register', '/forgot-password', '/reset-password']
   if (publicPages.includes(to.path)) return
 

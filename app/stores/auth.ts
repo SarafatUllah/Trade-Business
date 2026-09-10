@@ -27,7 +27,7 @@ export const useAuthStore = defineStore('auth', {
       this.business = data.business
       this.loaded = true
     },
-    async register(payload: { name: string; email: string; password: string; businessName: string }) {
+    async register(payload: { name: string; email: string; password: string; businessName: string; signupCode: string }) {
       const data = await $fetch('/api/auth/register', { method: 'POST', body: payload })
       this.user = data.user
       this.business = data.business

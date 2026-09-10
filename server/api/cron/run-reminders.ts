@@ -1,4 +1,5 @@
 import { runDueReminders } from '../../services/reminder-engine'
+import { deactivateExpiredTrials } from '../../services/trial-expiry'
 
 // This endpoint must be invoked periodically (e.g. every 15-60 minutes) by
 // a real scheduler — GitHub Actions on a cron schedule, Vercel Cron Jobs
@@ -16,6 +17,9 @@ export default defineEventHandler(async (event) => {
   if (!expected || (headerSecret !== expected && bearerSecret !== expected)) {
     throw createError({ statusCode: 401, statusMessage: 'Invalid or missing cron secret' })
   }
-  const result = await runDueReminders()
-  return { ok: true, ...result, ranAt: new Date().toISOString() }
+  const [reminderResult, trialResult] = await Promise.all([
+    runDueReminders(),
+    deactivateExpiredTrials()
+  ])
+  return { ok: true, ...reminderResult, ...trialResult, ranAt: new Date().toISOString() }
 })

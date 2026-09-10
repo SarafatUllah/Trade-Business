@@ -47,6 +47,15 @@ model Business {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Platform-level account lifecycle (separate from any in-business role).
+  // Accounts are never self-serve: every Business is created by redeeming
+  // a SignupCode that a platform admin generated after collecting payment
+  // (or as a free trial), never through open public registration.
+  accountStatus AccountStatus @default(ACTIVE)
+  trialEndsAt   DateTime? // set only for accounts created from a FREE_TRIAL code
+  signupCodeId  String?   @unique
+  signupCode    SignupCode? @relation(fields: [signupCodeId], references: [id])
+
   memberships Membership[]
   parties     Party[]
   fields      FieldDefinition[]
@@ -446,4 +455,100 @@ model AuditLog {
 
   @@index([businessId, entity, entityId])
   @@map("audit_logs")
+}
+
+// ============================================================
+// PLATFORM ADMIN (separate from any business — controls the SaaS itself)
+// ============================================================
+
+enum AccountStatus {
+  ACTIVE
+  DEACTIVATED
+}
+
+enum PlatformAdminRole {
+  SUPER_ADMIN
+  SUB_ADMIN
+}
+
+// Platform admins are a completely separate identity space from business
+// Users — different login, different session, and by design they never
+// have any path to a business User's password or session token. They can
+// only ever see profile/status info and act on account lifecycle
+// (activate/deactivate/delete), never "log in as" a business.
+model PlatformAdmin {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String
+  role         PlatformAdminRole @default(SUB_ADMIN)
+  isActive     Boolean           @default(true)
+
+  // Granular permissions for sub-admins. A SUPER_ADMIN implicitly has
+  // every permission regardless of these flags (checked in code), so
+  // this only meaningfully restricts SUB_ADMIN accounts.
+  canViewUsers        Boolean @default(true)
+  canManageUserStatus Boolean @default(false) // activate/deactivate
+  canDeleteUsers      Boolean @default(false)
+  canGenerateCodes    Boolean @default(false) // paid + trial signup codes
+  canManageSubAdmins  Boolean @default(false)
+
+  createdById String?
+  createdBy   PlatformAdmin?  @relation("AdminCreatedAdmins", fields: [createdById], references: [id])
+  createdAdmins PlatformAdmin[] @relation("AdminCreatedAdmins")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  signupCodes SignupCode[]
+  auditLogs   PlatformAuditLog[]
+
+  @@map("platform_admins")
+}
+
+enum SignupCodeType {
+  PAID
+  FREE_TRIAL
+}
+
+// A code must be redeemed to create a Business — there is no open public
+// registration. Admins generate these only after collecting payment
+// out-of-band (bKash/Nagad/cash) or to grant a free trial.
+model SignupCode {
+  id        String         @id @default(cuid())
+  code      String         @unique // human-shareable, e.g. "TRADE-7K2P9X"
+  type      SignupCodeType
+  trialDays Int? // only meaningful for FREE_TRIAL
+  notes     String? // e.g. "bKash txn 8827..., 1200tk, 6 months"
+
+  createdByAdminId String
+  createdByAdmin   PlatformAdmin @relation(fields: [createdByAdminId], references: [id])
+
+  isRevoked Boolean   @default(false)
+  usedAt    DateTime?
+  expiresAt DateTime? // optional: code itself expires if never redeemed
+
+  business Business?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdByAdminId])
+  @@map("signup_codes")
+}
+
+// Audit trail for admin actions — separate from the business-scoped
+// AuditLog since these actions aren't performed by a business User and
+// aren't scoped to one business's own history view.
+model PlatformAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     PlatformAdmin @relation(fields: [adminId], references: [id])
+  action    String // e.g. "ACTIVATE_BUSINESS", "DEACTIVATE_BUSINESS", "DELETE_BUSINESS", "CREATE_CODE", "CREATE_SUB_ADMIN"
+  targetType String? // e.g. "Business", "SignupCode", "PlatformAdmin"
+  targetId  String?
+  details   String? // JSON
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@map("platform_audit_logs")
 }

@@ -265,6 +265,49 @@ the ledger. See `tests/unit/formula.test.ts` for the full behavioral spec.
 
 ---
 
+## 8b. Platform admin panel
+
+Separate from the business app entirely — a different login, different
+session cookie, and a different JWT secret derivation, so there's no
+code path from admin access to a business user's password or session.
+
+**One-time setup after first deploy:**
+1. Set `ADMIN_BOOTSTRAP_SECRET` in your environment (any long random
+   string), redeploy.
+2. Call the bootstrap endpoint once to create your first Super Admin:
+   ```bash
+   curl -X POST https://your-app/api/admin/bootstrap \
+     -H "Content-Type: application/json" \
+     -d '{"secret":"YOUR_ADMIN_BOOTSTRAP_SECRET","name":"Your Name","email":"you@example.com","password":"a-strong-password"}'
+   ```
+   This only ever works once — it refuses if any admin already exists.
+3. Log in at `/admin/login` with that email/password.
+4. Optionally remove `ADMIN_BOOTSTRAP_SECRET` afterward (or rotate it) —
+   nothing else depends on it once your Super Admin exists.
+
+**What the admin panel does:**
+- Dashboard: total/active/deactivated/trial account counts, signup code
+  counts, recent signups.
+- Users: search/filter by status, view profile info (name, email,
+  business, activity counts) — **never** passwords or session tokens —
+  and activate/deactivate/delete accounts.
+- Signup codes: there is no open public registration. Every account is
+  created by redeeming a code the admin generates after collecting
+  payment out-of-band (bKash/Nagad/cash — tracked only via the code's
+  free-text `notes` field, not processed by this app), or as a free
+  trial with a chosen number of days. Codes can be revoked before use.
+- Free trials: a `FREE_TRIAL` code sets `trialEndsAt` on the resulting
+  Business. The same cron that runs reminders
+  (`/api/cron/run-reminders`) also deactivates any business whose trial
+  has passed — no separate scheduled job needed. A deactivated account
+  is blocked at login and mid-session (a global server middleware
+  checks status on every authenticated API call, not just at login).
+- Sub-admins (Super Admin only): create additional admins with a
+  specific subset of permissions (view users / manage status / delete /
+  generate codes / manage other sub-admins). A Super Admin cannot be
+  demoted or deleted by a sub-admin, and sub-admins cannot grant
+  themselves more permissions than a Super Admin explicitly gave them.
+
 ## 9. Environment variables
 
 | Variable | Required | Notes |

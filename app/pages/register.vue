@@ -6,6 +6,15 @@
 
     <form @submit.prevent="onSubmit">
       <div class="field">
+        <label for="signupCode">Signup code<span class="req">*</span></label>
+        <input
+          id="signupCode" v-model="signupCode" type="text" required placeholder="e.g. TRADE-7K2P9X" style="text-transform: uppercase;"
+          :class="{ invalid: touched.signupCode && !signupCode.trim() }" @blur="touched.signupCode = true"
+        />
+        <FieldMessage v-if="touched.signupCode && !signupCode.trim()" type="error" message="A signup code is required — contact your admin to get one" />
+        <small class="hint">New here? Contact us to arrange payment (or a free trial) and receive a signup code.</small>
+      </div>
+      <div class="field">
         <label for="businessName">Business name</label>
         <input
           id="businessName" v-model="businessName" type="text" required placeholder="e.g. Karim Trading"
@@ -54,26 +63,28 @@ const businessName = ref('')
 const name = ref('')
 const email = ref('')
 const password = ref('')
+const signupCode = ref('')
 const loading = ref(false)
 const error = ref('')
 const auth = useAuthStore()
 const router = useRouter()
 
-const touched = reactive({ businessName: false, name: false, email: false, password: false })
+const touched = reactive({ businessName: false, name: false, email: false, password: false, signupCode: false })
 const isValidEmail = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value))
 const isValidPassword = computed(() => password.value.length >= 8)
-const isFormValid = computed(() => businessName.value.trim() && name.value.trim() && isValidEmail.value && isValidPassword.value)
+const isFormValid = computed(() => businessName.value.trim() && name.value.trim() && isValidEmail.value && isValidPassword.value && signupCode.value.trim())
 
 async function onSubmit() {
   touched.businessName = true
   touched.name = true
   touched.email = true
   touched.password = true
+  touched.signupCode = true
   if (!isFormValid.value) return
   loading.value = true
   error.value = ''
   try {
-    await auth.register({ name: name.value, email: email.value, password: password.value, businessName: businessName.value })
+    await auth.register({ name: name.value, email: email.value, password: password.value, businessName: businessName.value, signupCode: signupCode.value.trim() })
     router.push('/')
   } catch (e: any) {
     error.value = e?.data?.statusMessage || 'Could not create your account.'
@@ -96,4 +107,6 @@ h1 { font-size: 26px; margin-bottom: 4px; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
 .switch { text-align: center; margin-top: 20px; font-size: 14px; color: var(--ink-400); }
 .switch a { color: var(--focus); font-weight: 600; }
+.req { color: var(--overdue-600); margin-left: 2px; }
+.hint { color: var(--ink-400); font-size: 12px; display: block; margin-top: 4px; }
 </style>
