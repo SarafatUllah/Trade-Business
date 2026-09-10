@@ -9,6 +9,12 @@
       <ChevronRight :size="18" :stroke-width="2.2" class="push-chevron" />
     </button>
 
+    <button v-if="pushEnabled" class="test-push-btn" :disabled="testingPush" @click="sendTestPush">
+      <span>{{ testingPush ? 'Sending…' : 'Send test notification' }}</span>
+      <ButtonSpinner v-if="testingPush" />
+    </button>
+    <p v-if="testResult" class="test-result">{{ testResult }}</p>
+
     <div v-if="pending"><SkeletonLoader :rows="4" :row-height="76" /></div>
     <div v-else-if="!data?.length"><EmptyState :icon="BellOff" message="You're all caught up" hint="No new notifications right now." /></div>
 
@@ -82,6 +88,22 @@ async function enablePush() {
     console.error('Push subscription failed', err)
   }
 }
+
+const testingPush = ref(false)
+const testResult = ref('')
+async function sendTestPush() {
+  testingPush.value = true
+  testResult.value = ''
+  try {
+    await $fetch('/api/push/test', { method: 'POST' })
+    testResult.value = 'Sent! You should see a notification appear shortly.'
+    await refresh()
+  } catch {
+    testResult.value = 'Could not send a test notification.'
+  } finally {
+    testingPush.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -109,6 +131,20 @@ async function enablePush() {
 .push-copy strong { font-size: 14px; }
 .push-copy small { opacity: 0.85; font-size: 12px; }
 .push-chevron { opacity: 0.8; flex-shrink: 0; }
+
+.test-push-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: white;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+.test-result { font-size: 13px; color: var(--ink-400); margin: -8px 0 16px; text-align: center; }
 
 .list-card { padding: 4px 14px; }
 .notif-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
