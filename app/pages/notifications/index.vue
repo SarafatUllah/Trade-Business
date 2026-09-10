@@ -59,7 +59,10 @@ const config = useRuntimeConfig()
 onMounted(async () => {
   pushSupported.value = 'serviceWorker' in navigator && 'PushManager' in window
   if (pushSupported.value) {
-    const reg = await navigator.serviceWorker.ready.catch(() => null)
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
+    ]).catch(() => null)
     const sub = await reg?.pushManager.getSubscription().catch(() => null)
     pushEnabled.value = !!sub
   }
@@ -93,7 +96,10 @@ async function enablePush() {
     }
 
     pushStatus.value = 'Step 3/5: waiting for service worker…'
-    const reg = await navigator.serviceWorker.ready
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timed out waiting for the service worker to become ready (10s). Try closing and reopening the app from the Home Screen.')), 10000))
+    ])
     const vapidKey = config.public.vapidPublicKey
     if (!vapidKey) {
       pushError.value = 'Push is not configured on the server yet (missing VAPID keys) — this needs to be added and the app redeployed.'
