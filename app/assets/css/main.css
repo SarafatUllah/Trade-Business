@@ -48,6 +48,14 @@ html, body {
   color: var(--ink-900);
   font-family: var(--font-ui);
   -webkit-tap-highlight-color: transparent;
+  /* Absolute outermost backstop against horizontal page overflow —
+     nothing on any page, however deeply nested, can ever make the whole
+     document wider than the screen. Content that genuinely needs its own
+     horizontal scroll (a wide table, etc.) still gets it locally via its
+     own overflow-x:auto wrapper; this only prevents that overflow from
+     ever propagating up to the page/viewport level. */
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 body {

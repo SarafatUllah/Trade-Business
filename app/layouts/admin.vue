@@ -36,7 +36,7 @@ async function onLogout() {
 </script>
 
 <style scoped>
-.admin-shell { min-height: 100dvh; display: flex; flex-direction: column; background: var(--paper-0); }
+.admin-shell { min-height: 100dvh; width: 100%; overflow-x: hidden; display: flex; flex-direction: column; background: var(--paper-0); }
 .admin-topbar {
   display: flex; align-items: center; justify-content: space-between;
   padding: calc(env(safe-area-inset-top) + 16px) 18px 16px;

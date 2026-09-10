@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trade-business-shell-v1'
+const CACHE_NAME = 'trade-business-shell-v2'
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png']
 
 self.addEventListener('install', (event) => {

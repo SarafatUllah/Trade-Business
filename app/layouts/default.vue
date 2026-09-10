@@ -95,6 +95,15 @@ onMounted(() => {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* Hard backstop: no matter what subtle flex-sizing edge case might
+     still let some wide descendant (a data table, a long unbroken
+     string, etc.) push wider than the viewport, this guarantees it can
+     never be visible/scrollable at the page level — the page itself
+     simply cannot be wider than the screen. Anything that needs its own
+     horizontal scroll (like the invoice table) still gets it locally via
+     its own overflow-x:auto container. */
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .topbar {
