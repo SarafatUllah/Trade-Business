@@ -95,11 +95,29 @@ async function enablePush() {
       return
     }
 
-    pushStatus.value = 'Step 3/5: waiting for service worker…'
-    const reg = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timed out waiting for the service worker to become ready (10s). Try closing and reopening the app from the Home Screen.')), 10000))
-    ])
+    pushStatus.value = 'Step 3/5: registering service worker…'
+    let reg: ServiceWorkerRegistration
+    try {
+      reg = await navigator.serviceWorker.register('/service-worker.js')
+    } catch (regErr: any) {
+      pushError.value = `Service worker registration itself failed: ${regErr?.message || regErr?.name || 'unknown error'}. This usually means /service-worker.js isn't being served correctly (wrong content type or blocked by routing).`
+      return
+    }
+
+    pushStatus.value = `Step 3/5: waiting for activation… (state: ${reg.installing ? 'installing' : reg.waiting ? 'waiting' : reg.active ? 'active' : 'unknown'})`
+    if (!reg.active) {
+      const worker = reg.installing || reg.waiting
+      if (worker) {
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('Timed out waiting for the worker to activate (10s).')), 10000)
+          worker.addEventListener('statechange', () => {
+            pushStatus.value = `Step 3/5: worker state changed to "${worker.state}"`
+            if (worker.state === 'activated') { clearTimeout(timer); resolve() }
+            if (worker.state === 'redundant') { clearTimeout(timer); reject(new Error('The service worker became redundant (install failed) — check that /service-worker.js loads without errors.')) }
+          })
+        })
+      }
+    }
     const vapidKey = config.public.vapidPublicKey
     if (!vapidKey) {
       pushError.value = 'Push is not configured on the server yet (missing VAPID keys) — this needs to be added and the app redeployed.'

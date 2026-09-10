@@ -8,13 +8,19 @@ export default defineNuxtConfig({
   // Nuxt silently falls back to its built-in welcome page because it never
   // finds a custom app.vue or any pages.
   srcDir: 'app/',
-  // IMPORTANT: srcDir above also shifts Nitro's default serverDir
-  // resolution in this Nuxt version, which silently dropped every
-  // server/api/* route from the build (they compiled with zero warnings —
-  // the routes just didn't exist, so every API call fell through to the
-  // page renderer instead, which is why login/register appeared to "do
-  // nothing"). Pin serverDir explicitly back to the project root so
-  // server/ is found regardless of srcDir.
+  // IMPORTANT: srcDir also shifts Nitro's default serverDir AND public
+  // directory resolution in this Nuxt version — the serverDir issue was
+  // fixed earlier, but the public/ directory issue went unnoticed until
+  // now: every file in public/ (favicon, manifest, icons, robots.txt,
+  // service-worker.js) was silently absent from every deployed build,
+  // since Nuxt actually looks for it at app/public/ once srcDir is set,
+  // not the project-root public/ folder. Any request for these files fell
+  // through to the SPA fallback, which (correctly, for an actual page)
+  // redirected to /login — this is why service worker registration
+  // silently failed forever: the browser received an HTML login-redirect
+  // page instead of JavaScript when trying to register '/service-worker.js'.
+  // Fixed by moving the public/ folder to app/public/ (its real location
+  // in this configuration) rather than fighting the resolution further.
   serverDir: 'server/',
   modules: ['@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
