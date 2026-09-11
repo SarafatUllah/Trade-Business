@@ -95,7 +95,7 @@
       </div>
       <div class="field">
         <label>Key (used in formulas)</label>
-        <input v-model="form.key" type="text" required pattern="^[a-z][a-z0-9_]*$" placeholder="truck_rent" />
+        <input v-model="form.key" type="text" required pattern="^[a-z][a-z0-9_]*$" placeholder="truck_rent" @input="onKeyManualEdit" />
       </div>
       <div class="field">
         <label>Type</label>
@@ -233,9 +233,22 @@ async function saveEdit(f: any) {
   }
 }
 
+const keyManuallyEdited = ref(false)
 function autoKey() {
-  if (form.key) return
+  // Bug fix: this previously bailed out the moment form.key had ANY
+  // value — which, since this runs on every keystroke of the label
+  // field, meant it captured only the label's first character (after
+  // that one auto-fill, form.key was no longer empty, so every
+  // subsequent keystroke got silently ignored). The key stayed frozen
+  // at a single letter no matter how much more of the label you typed.
+  // Now it keeps regenerating from the full label on every keystroke,
+  // and only stops if the user has directly edited the key field
+  // themselves (tracked separately, not inferred from "key is non-empty").
+  if (keyManuallyEdited.value) return
   form.key = form.label.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_')
+}
+function onKeyManualEdit() {
+  keyManuallyEdited.value = true
 }
 
 async function onCreate() {
@@ -250,6 +263,7 @@ async function onCreate() {
       body: { entity: entity.value, ...form, formula: form.type === 'FORMULA' ? form.formula : undefined, options }
     })
     Object.assign(form, { label: '', key: '', type: 'TEXT', formula: '', isRequired: false, showInTable: true, showInInvoice: false, isFilterable: false })
+    keyManuallyEdited.value = false
     optionsInput.value = ''
     showForm.value = false
     await loadFields()
