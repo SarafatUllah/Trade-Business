@@ -4,7 +4,7 @@
 
     <button class="btn block" @click="showForm = !showForm">{{ showForm ? 'Cancel' : '+ Add summary line' }}</button>
 
-    <form v-if="showForm" class="card full-bleed new-form" @submit.prevent="onCreate">
+    <form v-if="showForm" class="card new-form" @submit.prevent="onCreate">
       <div class="field">
         <label>Label<span class="req">*</span></label>
         <input v-model="form.label" type="text" required placeholder="e.g. Total Amount" />
@@ -27,7 +27,7 @@
     <div v-if="pending"><SkeletonLoader :rows="3" :row-height="70" /></div>
     <div v-else-if="!data?.length"><EmptyState :icon="Sigma" message="No summary lines yet" hint="Add one above — e.g. 'Total Amount' summing your Due field." /></div>
 
-    <div v-else class="card full-bleed list-card">
+    <div v-else class="card list-card">
       <div v-for="def in data" :key="def.id" class="def-row">
         <template v-if="editingId !== def.id">
           <div class="row-main">
