@@ -7,6 +7,13 @@ export interface InvoiceColumn {
   label: string
 }
 
+export interface InvoiceSummaryLine {
+  label: string
+  kind: 'SUM' | 'STATUS'
+  total?: number
+  status?: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | null
+}
+
 export interface InvoicePdfInput {
   business: { name: string; currency: string }
   party: { name: string; phone?: string | null; address?: string | null }
@@ -15,14 +22,13 @@ export interface InvoicePdfInput {
   periodEnd?: Date | null
   columns: InvoiceColumn[]
   rows: Record<string, unknown>[] // each row's dynamic field snapshot, keyed by column key
-  summary: {
-    totalAmount: number
-    totalPaid: number
-    totalReceived: number
-    totalPayable: number
-    totalReceivable: number
-    outstandingBalance: number
-  }
+  // Same user-defined Party summary lines (Settings -> Party summary)
+  // the web invoice page renders — see server/utils/invoice-summary.ts,
+  // the single shared source both places compute this from. Previously
+  // this was a fixed Total Amount/Paid/Received/Payable/Receivable
+  // shape independent of that system, so the PDF and the web page could
+  // (and did) show different numbers for the same invoice.
+  summaryFields: InvoiceSummaryLine[]
 }
 
 // PDFKit's built-in standard fonts (Helvetica etc.) only support the
@@ -154,21 +160,16 @@ export function generateInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
     doc.moveDown(0.8)
 
     // ---------- Summary ----------
-    const summaryLines: [string, number][] = [
-      ['Total Amount', input.summary.totalAmount],
-      ['Total Paid', input.summary.totalPaid],
-      ['Total Received', input.summary.totalReceived],
-      ['Total Payable', input.summary.totalPayable],
-      ['Total Receivable', input.summary.totalReceivable],
-      ['Outstanding Balance', input.summary.outstandingBalance]
-    ]
     const summaryLabelWidth = 160
     doc.fontSize(10)
-    for (const [label, value] of summaryLines) {
+    for (const line of input.summaryFields) {
       const y = doc.y
-      doc.font('Helvetica-Bold').fillColor('#555').text(label, pageLeft, y, { width: summaryLabelWidth })
+      doc.font('Helvetica-Bold').fillColor('#555').text(line.label, pageLeft, y, { width: summaryLabelWidth })
+      const display = line.kind === 'STATUS'
+        ? (line.status === 'PAID' ? 'Paid' : line.status === 'PARTIALLY_PAID' ? 'Partially Paid' : line.status === 'UNPAID' ? 'Unpaid' : '—')
+        : formatMoneyForPdf(line.total ?? 0, input.business.currency)
       doc.font('Helvetica-Bold').fillColor('#000').text(
-        formatMoneyForPdf(value, input.business.currency),
+        display,
         pageRight - summaryLabelWidth, y, { width: summaryLabelWidth, align: 'right' }
       )
       doc.y = y + 18
