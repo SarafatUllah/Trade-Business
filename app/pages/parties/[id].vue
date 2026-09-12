@@ -137,7 +137,6 @@
             <strong>{{ i.invoiceNumber }}</strong>
             <small>{{ formatDate(i.createdAt) }}</small>
           </div>
-          <span class="num">{{ format(i.totalAmount) }}</span>
         </NuxtLink>
       </div>
 

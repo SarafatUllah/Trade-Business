@@ -9,7 +9,7 @@
           <strong>{{ i.invoiceNumber }}</strong>
           <small>{{ i.party.name }} · {{ formatDate(i.createdAt) }}</small>
         </div>
-        <span class="num">{{ format(i.totalAmount) }}</span>
+        <ChevronRight :size="18" :stroke-width="2.2" class="chevron" />
       </NuxtLink>
     </div>
 
@@ -18,8 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { FileText } from '@lucide/vue'
-const { format } = useCurrency()
+import { FileText, ChevronRight } from '@lucide/vue'
 const { data, pending } = await useFetch('/api/invoices')
 function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -30,5 +29,6 @@ function formatDate(d: string | Date) {
 .list-card { padding: 4px 12px; }
 .row-main { display: flex; flex-direction: column; gap: 2px; }
 .row-main small { color: var(--ink-400); }
+.chevron { color: var(--ink-400); flex-shrink: 0; }
 .new-invoice { margin-top: 16px; }
 </style>

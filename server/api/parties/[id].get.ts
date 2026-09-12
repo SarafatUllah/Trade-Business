@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
     entries,
     entryFieldDefs: tableFieldDefs.map(f => ({ key: f.key, label: f.label, type: f.type })),
     summaryFields,
-    invoices: party.invoices.map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, totalAmount: toApiNumber(i.totalAmount), createdAt: i.createdAt })),
+    invoices: party.invoices.map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, createdAt: i.createdAt })),
     summary: {
       outstandingPayable,
       outstandingReceivable,
