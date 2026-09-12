@@ -1,6 +1,7 @@
 import { requireSession } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
 import { getActiveFields, getComputedFieldValues } from '../../utils/fields'
+import { computeAutoPaymentStatus } from '../../utils/formula'
 import {
   computePayablePaid, computePayableRemaining, computePayableStatus,
   computeReceivableReceived, computeReceivableRemaining, computeReceivableStatus
@@ -63,14 +64,17 @@ export default defineEventHandler(async (event) => {
   const tableFieldDefs = transactionFieldDefs.filter(f => f.showInTable)
 
   // Summary lines are entirely user-defined (see Settings -> Party
-  // summary): each is "label" + "which field to sum", not a fixed set of
-  // hardcoded totals. Computed over the SAME filtered entry set as the
-  // Entries list, so applying a date filter updates both together.
+  // summary): each is either "label + which field to sum" (SUM) or
+  // "label + compare two other summary lines' totals into a Paid/
+  // Partially Paid/Unpaid badge" (STATUS) — not a fixed set of hardcoded
+  // totals. Computed over the SAME filtered entry set as the Entries
+  // list, so applying a date filter updates both together.
   const summaryDefs = await prisma.summaryFieldDefinition.findMany({
     where: { businessId: session.businessId },
     orderBy: { sortOrder: 'asc' }
   })
-  const summaryTotals = new Map<string, ReturnType<typeof toMoney>>(summaryDefs.map(d => [d.id, toMoney(0)]))
+  const sumDefs = summaryDefs.filter(d => d.kind === 'SUM')
+  const summaryTotals = new Map<string, ReturnType<typeof toMoney>>(sumDefs.map(d => [d.id, toMoney(0)]))
 
   const entries = await Promise.all(
     party.transactions.map(async (t) => {
@@ -80,8 +84,8 @@ export default defineEventHandler(async (event) => {
       // formula whose dependencies are present in the field set it's
       // given.
       const allValues = transactionFieldDefs.length ? await getComputedFieldValues(transactionFieldDefs, t.id) : {}
-      for (const def of summaryDefs) {
-        const v = allValues[def.sourceKey]
+      for (const def of sumDefs) {
+        const v = allValues[def.sourceKey!]
         if (typeof v === 'number') summaryTotals.set(def.id, summaryTotals.get(def.id)!.plus(v))
       }
       const displayValues: Record<string, unknown> = {}
@@ -90,13 +94,24 @@ export default defineEventHandler(async (event) => {
     })
   )
 
+  // STATUS lines compare two SUM lines' already-computed totals — a
+  // second pass, after every SUM total is known.
+  const summaryFields = summaryDefs.map(d => {
+    if (d.kind === 'STATUS') {
+      const total = d.statusTotalSummaryId ? toApiNumber(summaryTotals.get(d.statusTotalSummaryId) ?? toMoney(0)) : null
+      const paid = d.statusPaidSummaryId ? toApiNumber(summaryTotals.get(d.statusPaidSummaryId) ?? toMoney(0)) : null
+      return { id: d.id, label: d.label, kind: d.kind, status: computeAutoPaymentStatus(total, paid) }
+    }
+    return { id: d.id, label: d.label, kind: d.kind, total: toApiNumber(summaryTotals.get(d.id)!) }
+  })
+
   return {
     party: { id: party.id, type: party.type, name: party.name, phone: party.phone, address: party.address, notes: party.notes },
     payables,
     receivables,
     entries,
     entryFieldDefs: tableFieldDefs.map(f => ({ key: f.key, label: f.label, type: f.type })),
-    summaryFields: summaryDefs.map(d => ({ id: d.id, label: d.label, sourceKey: d.sourceKey, total: toApiNumber(summaryTotals.get(d.id)!) })),
+    summaryFields,
     invoices: party.invoices.map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, totalAmount: toApiNumber(i.totalAmount), createdAt: i.createdAt })),
     summary: {
       outstandingPayable,

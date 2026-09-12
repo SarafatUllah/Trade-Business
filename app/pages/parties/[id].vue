@@ -120,7 +120,8 @@
         <div class="card full-bleed summary">
           <div v-for="sf in data.summaryFields" :key="sf.id" class="row">
             <span class="label">{{ sf.label }}</span>
-            <span class="value num">{{ format(sf.total) }}</span>
+            <span v-if="sf.kind === 'STATUS'" class="status-pill" :class="statusPillClass(sf.status)">{{ statusLabel(sf.status) }}</span>
+            <span v-else class="value num">{{ format(sf.total) }}</span>
           </div>
         </div>
         <p class="summary-hint">
@@ -239,6 +240,18 @@ function displayField(v: unknown) {
   if (typeof v === 'number') return v.toLocaleString('en-US', { maximumFractionDigits: 2 })
   return String(v)
 }
+function statusLabel(v: string | null) {
+  if (v === 'PAID') return 'Paid'
+  if (v === 'PARTIALLY_PAID') return 'Partially Paid'
+  if (v === 'UNPAID') return 'Unpaid'
+  return '—'
+}
+function statusPillClass(v: string | null) {
+  if (v === 'PAID') return 'paid'
+  if (v === 'PARTIALLY_PAID') return 'partial'
+  if (v === 'UNPAID') return 'unpaid'
+  return 'none'
+}
 </script>
 
 <style scoped>
@@ -300,6 +313,11 @@ function displayField(v: unknown) {
 }
 .summary .label { color: var(--ink-700); }
 .summary .value { text-align: right; font-weight: 700; }
+.status-pill { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.status-pill.paid { background: var(--receivable-100); color: var(--receivable-600); }
+.status-pill.partial { background: var(--payable-100); color: var(--payable-600); }
+.status-pill.unpaid { background: var(--overdue-100); color: var(--overdue-600); }
+.status-pill.none { background: var(--paper-100); color: var(--ink-400); }
 .summary-hint { font-size: 12px; color: var(--ink-400); margin: 6px 0 8px; }
 .summary-hint a { color: var(--focus); font-weight: 600; }
 

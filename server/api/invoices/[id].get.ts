@@ -1,5 +1,6 @@
 import { requireSession } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
+import { computeAutoPaymentStatus } from '../../utils/formula'
 import { toApiNumber, toMoney } from '../../utils/money'
 
 export default defineEventHandler(async (event) => {
@@ -24,14 +25,26 @@ export default defineEventHandler(async (event) => {
     where: { businessId: session.businessId },
     orderBy: { sortOrder: 'asc' }
   })
-  const summaryTotals = new Map<string, ReturnType<typeof toMoney>>(summaryDefs.map(d => [d.id, toMoney(0)]))
+  const sumDefs = summaryDefs.filter(d => d.kind === 'SUM')
+  const summaryTotals = new Map<string, ReturnType<typeof toMoney>>(sumDefs.map(d => [d.id, toMoney(0)]))
   for (const item of invoice.items) {
     const snapshot = JSON.parse(item.snapshot) as Record<string, unknown>
-    for (const def of summaryDefs) {
-      const v = snapshot[def.sourceKey]
+    for (const def of sumDefs) {
+      const v = snapshot[def.sourceKey!]
       if (typeof v === 'number') summaryTotals.set(def.id, summaryTotals.get(def.id)!.plus(v))
     }
   }
+
+  // STATUS lines compare two SUM lines' already-computed totals — a
+  // second pass, after every SUM total is known.
+  const summaryFields = summaryDefs.map(d => {
+    if (d.kind === 'STATUS') {
+      const total = d.statusTotalSummaryId ? toApiNumber(summaryTotals.get(d.statusTotalSummaryId) ?? toMoney(0)) : null
+      const paid = d.statusPaidSummaryId ? toApiNumber(summaryTotals.get(d.statusPaidSummaryId) ?? toMoney(0)) : null
+      return { id: d.id, label: d.label, kind: d.kind, status: computeAutoPaymentStatus(total, paid) }
+    }
+    return { id: d.id, label: d.label, kind: d.kind, total: toApiNumber(summaryTotals.get(d.id)!) }
+  })
 
   return {
     id: invoice.id,
@@ -42,7 +55,7 @@ export default defineEventHandler(async (event) => {
     periodEnd: invoice.periodEnd,
     columns,
     rows: invoice.items.map(i => ({ date: i.date, values: JSON.parse(i.snapshot) as Record<string, unknown> })),
-    summaryFields: summaryDefs.map(d => ({ id: d.id, label: d.label, sourceKey: d.sourceKey, total: toApiNumber(summaryTotals.get(d.id)!) })),
+    summaryFields,
     createdAt: invoice.createdAt
   }
 })

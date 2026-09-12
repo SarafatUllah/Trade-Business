@@ -500,11 +500,23 @@ enum PlatformAdminRole {
 // label the user chooses plus which TRANSACTION field to sum. Replaces
 // a previously hardcoded Total Amount/Paid/Received — the user decides
 // how many lines exist, what each is called, and which column feeds it.
+enum SummaryFieldKind {
+  SUM    // sums one Ledger field's values across a party's/invoice's entries
+  STATUS // compares two OTHER summary lines' totals (e.g. Total Due vs Total Paid) into a Paid/Partially Paid/Unpaid badge
+}
+
 model SummaryFieldDefinition {
   id         String   @id @default(cuid())
   businessId String
   label      String
-  sourceKey  String // key of the TRANSACTION FieldDefinition to sum
+  kind       SummaryFieldKind @default(SUM)
+  sourceKey  String? // SUM only: key of the TRANSACTION FieldDefinition to sum
+  // STATUS only: which two OTHER SummaryFieldDefinition rows (both must be
+  // kind=SUM) to compare. Plain string ids rather than a relation, since a
+  // self-relation here would need two distinct named relations anyway and
+  // these are only ever read back by id within the same business.
+  statusTotalSummaryId String?
+  statusPaidSummaryId  String?
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

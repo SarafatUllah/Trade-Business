@@ -5,7 +5,10 @@ import { getActiveFields } from '../../utils/fields'
 
 const schema = z.object({
   label: z.string().min(1).max(100),
-  sourceKey: z.string().min(1)
+  kind: z.enum(['SUM', 'STATUS']).default('SUM'),
+  sourceKey: z.string().min(1).optional(),
+  statusTotalSummaryId: z.string().min(1).optional(),
+  statusPaidSummaryId: z.string().min(1).optional()
 })
 
 export default defineEventHandler(async (event) => {
@@ -13,14 +16,26 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const parsed = schema.safeParse(body)
   if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'Invalid input', data: parsed.error.flatten() })
+  const data = parsed.data
 
-  // Only a field that can actually yield a number is summable — NUMBER,
-  // CURRENCY, or FORMULA (which always resolves to a number).
-  const activeFields = await getActiveFields(session.businessId, 'TRANSACTION')
-  const sourceField = activeFields.find(f => f.key === parsed.data.sourceKey)
-  if (!sourceField) throw createError({ statusCode: 400, statusMessage: 'That field was not found among active Ledger fields' })
-  if (!['NUMBER', 'CURRENCY', 'FORMULA'].includes(sourceField.type)) {
-    throw createError({ statusCode: 400, statusMessage: `"${sourceField.label}" is a ${sourceField.type} field and can't be summed — choose a Number, Currency, or Formula field` })
+  if (data.kind === 'SUM') {
+    if (!data.sourceKey) throw createError({ statusCode: 400, statusMessage: 'Select a field to sum' })
+    const activeFields = await getActiveFields(session.businessId, 'TRANSACTION')
+    const sourceField = activeFields.find(f => f.key === data.sourceKey)
+    if (!sourceField) throw createError({ statusCode: 400, statusMessage: 'That field was not found among active Ledger fields' })
+    if (!['NUMBER', 'CURRENCY', 'FORMULA'].includes(sourceField.type)) {
+      throw createError({ statusCode: 400, statusMessage: `"${sourceField.label}" is a ${sourceField.type} field and can't be summed — choose a Number, Currency, or Formula field` })
+    }
+  } else {
+    if (!data.statusTotalSummaryId || !data.statusPaidSummaryId) {
+      throw createError({ statusCode: 400, statusMessage: 'A Payment Status summary line needs both a Total line and a Paid line selected' })
+    }
+    const existingSums = await prisma.summaryFieldDefinition.findMany({
+      where: { businessId: session.businessId, kind: 'SUM', id: { in: [data.statusTotalSummaryId, data.statusPaidSummaryId] } }
+    })
+    if (existingSums.length !== 2) {
+      throw createError({ statusCode: 400, statusMessage: 'Both selected lines must be existing "sum a field" summary lines' })
+    }
   }
 
   const maxSort = await prisma.summaryFieldDefinition.aggregate({
@@ -31,8 +46,11 @@ export default defineEventHandler(async (event) => {
   const created = await prisma.summaryFieldDefinition.create({
     data: {
       businessId: session.businessId,
-      label: parsed.data.label,
-      sourceKey: parsed.data.sourceKey,
+      label: data.label,
+      kind: data.kind,
+      sourceKey: data.kind === 'SUM' ? data.sourceKey : null,
+      statusTotalSummaryId: data.kind === 'STATUS' ? data.statusTotalSummaryId : null,
+      statusPaidSummaryId: data.kind === 'STATUS' ? data.statusPaidSummaryId : null,
       sortOrder: (maxSort._max.sortOrder ?? -1) + 1
     }
   })
