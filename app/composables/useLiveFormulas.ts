@@ -1,9 +1,11 @@
-import { resolveCalculationOrder, evaluateFormula, type FormulaFieldDef } from '../../server/utils/formula'
+import { resolveCalculationOrder, evaluateFormula, computeAutoPaymentStatus, type FormulaFieldDef } from '../../server/utils/formula'
 
 export interface LiveFieldDef {
   key: string
   type: string
   formula?: string | null
+  statusTotalKey?: string | null
+  statusPaidKey?: string | null
 }
 
 /**
@@ -19,7 +21,7 @@ export function useLiveFormulas(fields: Ref<LiveFieldDef[]>, values: Record<stri
       .filter(f => f.type === 'FORMULA' && f.formula)
       .map(f => ({ key: f.key, formula: f.formula as string }))
 
-    const result: Record<string, number> = {}
+    const result: Record<string, number | string | null> = {}
     try {
       const order = resolveCalculationOrder(formulaFields)
       for (const key of order) {
@@ -29,6 +31,15 @@ export function useLiveFormulas(fields: Ref<LiveFieldDef[]>, values: Record<stri
     } catch {
       // Invalid/circular formula config — leave preview blank rather than crash the form.
     }
+
+    for (const f of fields.value) {
+      if (f.type !== 'AUTO_STATUS') continue
+      const merged = { ...values, ...result }
+      const total = typeof merged[f.statusTotalKey || ''] === 'number' ? (merged[f.statusTotalKey!] as number) : null
+      const paid = typeof merged[f.statusPaidKey || ''] === 'number' ? (merged[f.statusPaidKey!] as number) : null
+      result[f.key] = computeAutoPaymentStatus(total, paid)
+    }
+
     return result
   })
 

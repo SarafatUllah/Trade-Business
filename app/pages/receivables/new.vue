@@ -53,8 +53,8 @@
         v-for="f in customFields"
         :key="f.id"
         :field="f"
-        :model-value="f.type === 'FORMULA' ? undefined : fieldValues[f.key]"
-        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        :model-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? undefined : fieldValues[f.key]"
+        :computed-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? liveFormulas[f.key] : undefined"
         :force-validate="forceValidate"
         @update:model-value="(v) => (fieldValues[f.key] = v)"
       />
@@ -85,7 +85,7 @@ const touched = reactive({ party: false, amount: false, expectedDate: false })
 
 watch(customFields, (list) => {
   for (const f of list) {
-    if (f.type === 'FORMULA') continue
+    if (['FORMULA','AUTO_STATUS'].includes(f.type)) continue
     if (!(f.key in fieldValues)) fieldValues[f.key] = f.type === 'BOOLEAN' ? false : ''
   }
 }, { immediate: true })
@@ -114,7 +114,7 @@ function toggleReminder(v: number) {
 
 function hasMissingRequiredField() {
   return customFields.value.some(f => {
-    if (!f.isRequired || f.type === 'FORMULA') return false
+    if (!f.isRequired || ['FORMULA','AUTO_STATUS'].includes(f.type)) return false
     const v = fieldValues[f.key]
     return v === undefined || v === null || v === ''
   })

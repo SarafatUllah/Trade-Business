@@ -13,6 +13,7 @@
           <div class="row-main">
             <strong>{{ f.label }} <small class="type-tag">{{ f.type }} · {{ f.key }}</small></strong>
             <small v-if="f.formula" class="formula-text">= {{ f.formula }}</small>
+            <small v-if="f.type === 'AUTO_STATUS'" class="formula-text">compares {{ f.statusPaidKey }} vs {{ f.statusTotalKey }}</small>
             <small class="flags">
               <span v-if="f.showInTable" class="flag-pill">In table</span>
               <span v-if="f.showInInvoice" class="flag-pill">In invoice</span>
@@ -46,6 +47,7 @@
               <option value="STATUS">Status</option>
               <option value="BOOLEAN">Yes / No</option>
               <option value="FORMULA">Formula (calculated)</option>
+              <option value="AUTO_STATUS">Payment Status (auto)</option>
             </select>
             <small v-if="editForm.type !== f.type" class="hint warn">
               Changing type will try to convert existing saved values — double-check your data afterward.
@@ -69,6 +71,23 @@
               <button type="button" class="chip op" @click="editForm.formula += ')'">)</button>
             </div>
           </div>
+          <template v-if="editForm.type === 'AUTO_STATUS'">
+            <div class="field">
+              <label>Total / Due field</label>
+              <select v-model="editForm.statusTotalKey">
+                <option value="" disabled>Select a field…</option>
+                <option v-for="sf in summableFields" :key="sf.key" :value="sf.key">{{ sf.label }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Paid field</label>
+              <select v-model="editForm.statusPaidKey">
+                <option value="" disabled>Select a field…</option>
+                <option v-for="sf in summableFields" :key="sf.key" :value="sf.key">{{ sf.label }}</option>
+              </select>
+            </div>
+            <small class="hint">Shows Paid / Partially Paid / Unpaid automatically by comparing these two fields — never entered manually.</small>
+          </template>
           <div v-if="['DROPDOWN', 'STATUS'].includes(editForm.type)" class="field">
             <label>Options (comma separated)</label>
             <input v-model="editOptionsInput" type="text" />
@@ -110,6 +129,7 @@
           <option value="STATUS">Status</option>
           <option value="BOOLEAN">Yes / No</option>
           <option value="FORMULA">Formula (calculated)</option>
+          <option value="AUTO_STATUS">Payment Status (auto)</option>
         </select>
       </div>
 
@@ -127,6 +147,25 @@
           <button type="button" class="chip op" @click="form.formula += ')'">)</button>
         </div>
       </div>
+
+      <template v-if="form.type === 'AUTO_STATUS'">
+        <div class="field">
+          <label>Total / Due field</label>
+          <select v-model="form.statusTotalKey" required>
+            <option value="" disabled>Select a field…</option>
+            <option v-for="sf in summableFields" :key="sf.key" :value="sf.key">{{ sf.label }}</option>
+          </select>
+          <small v-if="!summableFields.length" class="hint">No Number, Currency, or Formula fields exist yet — add one first.</small>
+        </div>
+        <div class="field">
+          <label>Paid field</label>
+          <select v-model="form.statusPaidKey" required>
+            <option value="" disabled>Select a field…</option>
+            <option v-for="sf in summableFields" :key="sf.key" :value="sf.key">{{ sf.label }}</option>
+          </select>
+        </div>
+        <small class="hint">Shows Paid / Partially Paid / Unpaid automatically by comparing these two fields — never entered manually.</small>
+      </template>
 
       <div v-if="['DROPDOWN', 'STATUS'].includes(form.type)" class="field">
         <label>Options (comma separated)</label>
@@ -158,22 +197,26 @@ const error = ref('')
 const optionsInput = ref('')
 
 const editingId = ref<string | null>(null)
-const editForm = reactive<{ label: string; key: string; type: string; formula: string; showInTable: boolean; showInInvoice: boolean; isFilterable: boolean; isRequired: boolean }>({
-  label: '', key: '', type: 'TEXT', formula: '', showInTable: false, showInInvoice: false, isFilterable: false, isRequired: false
+const editForm = reactive<{ label: string; key: string; type: string; formula: string; statusTotalKey: string; statusPaidKey: string; showInTable: boolean; showInInvoice: boolean; isFilterable: boolean; isRequired: boolean }>({
+  label: '', key: '', type: 'TEXT', formula: '', statusTotalKey: '', statusPaidKey: '', showInTable: false, showInInvoice: false, isFilterable: false, isRequired: false
 })
 const editOptionsInput = ref('')
 const editSaving = ref(false)
 const editError = ref('')
 
 const form = reactive({
-  label: '', key: '', type: 'TEXT', formula: '',
+  label: '', key: '', type: 'TEXT', formula: '', statusTotalKey: '', statusPaidKey: '',
   isRequired: false, showInTable: true, showInInvoice: false, isFilterable: false
 })
+
+// Fields a Payment Status field can compare — only types that yield a
+// real number are summable/comparable this way.
+const summableFields = computed(() => fields.value.filter(f => ['NUMBER', 'CURRENCY', 'FORMULA'].includes(f.type)).map(f => ({ key: f.key, label: f.label })))
 
 // Fields you can tap to insert into a formula — shows the human label
 // (e.g. "Weight") instead of the raw key (e.g. "w"), which is what
 // actually gets inserted, so the builder is legible even with terse keys.
-const existingFields = computed(() => fields.value.filter(f => f.type !== 'FORMULA').map(f => ({ key: f.key, label: f.label })))
+const existingFields = computed(() => fields.value.filter(f => !['FORMULA', 'AUTO_STATUS'].includes(f.type)).map(f => ({ key: f.key, label: f.label })))
 function referenceableFields(current: any) {
   return existingFields.value.filter(f => f.key !== current.key)
 }
@@ -197,6 +240,8 @@ function toggleEdit(f: any) {
   editForm.key = f.key
   editForm.type = f.type
   editForm.formula = f.formula || ''
+  editForm.statusTotalKey = f.statusTotalKey || ''
+  editForm.statusPaidKey = f.statusPaidKey || ''
   editForm.showInTable = f.showInTable
   editForm.showInInvoice = f.showInInvoice
   editForm.isFilterable = f.isFilterable
@@ -218,6 +263,8 @@ async function saveEdit(f: any) {
         key: editForm.key !== f.key ? editForm.key : undefined,
         type: editForm.type !== f.type ? editForm.type : undefined,
         formula: editForm.type === 'FORMULA' ? editForm.formula : undefined,
+        statusTotalKey: editForm.type === 'AUTO_STATUS' ? editForm.statusTotalKey : undefined,
+        statusPaidKey: editForm.type === 'AUTO_STATUS' ? editForm.statusPaidKey : undefined,
         showInTable: editForm.showInTable,
         showInInvoice: editForm.showInInvoice,
         isFilterable: editForm.isFilterable,
@@ -260,9 +307,9 @@ async function onCreate() {
       : undefined
     await $fetch('/api/fields', {
       method: 'POST',
-      body: { entity: entity.value, ...form, formula: form.type === 'FORMULA' ? form.formula : undefined, options }
+      body: { entity: entity.value, ...form, formula: form.type === 'FORMULA' ? form.formula : undefined, statusTotalKey: form.type === 'AUTO_STATUS' ? form.statusTotalKey : undefined, statusPaidKey: form.type === 'AUTO_STATUS' ? form.statusPaidKey : undefined, options }
     })
-    Object.assign(form, { label: '', key: '', type: 'TEXT', formula: '', isRequired: false, showInTable: true, showInInvoice: false, isFilterable: false })
+    Object.assign(form, { label: '', key: '', type: 'TEXT', formula: '', statusTotalKey: '', statusPaidKey: '', isRequired: false, showInTable: true, showInInvoice: false, isFilterable: false })
     keyManuallyEdited.value = false
     optionsInput.value = ''
     showForm.value = false

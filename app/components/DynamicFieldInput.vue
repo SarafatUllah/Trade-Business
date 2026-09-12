@@ -46,6 +46,10 @@
       {{ computedDisplay }}
       <small>calculated</small>
     </div>
+    <div v-else-if="field.type === 'AUTO_STATUS'" class="status-readonly">
+      <span class="status-pill" :class="statusPillClass">{{ statusLabel }}</span>
+      <small>auto</small>
+    </div>
 
     <FieldMessage v-if="showError" type="error" :message="`${field.label} is required`" />
   </div>
@@ -81,6 +85,21 @@ const computedDisplay = computed(() => {
   if (v === null || v === undefined) return '—'
   return typeof v === 'number' ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : String(v)
 })
+
+const statusLabel = computed(() => {
+  const v = props.computedValue as string | null
+  if (v === 'PAID') return 'Paid'
+  if (v === 'PARTIALLY_PAID') return 'Partially Paid'
+  if (v === 'UNPAID') return 'Unpaid'
+  return '—'
+})
+const statusPillClass = computed(() => {
+  const v = props.computedValue as string | null
+  if (v === 'PAID') return 'paid'
+  if (v === 'PARTIALLY_PAID') return 'partial'
+  if (v === 'UNPAID') return 'unpaid'
+  return 'none'
+})
 </script>
 
 <style scoped>
@@ -97,4 +116,18 @@ const computedDisplay = computed(() => {
   font-size: 16px;
 }
 .formula-readonly small { color: var(--ink-400); font-family: var(--font-ui); }
+.status-readonly {
+  padding: 12px;
+  background: var(--paper-100);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.status-readonly small { color: var(--ink-400); }
+.status-pill { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.status-pill.paid { background: var(--receivable-100); color: var(--receivable-600); }
+.status-pill.partial { background: var(--payable-100); color: var(--payable-600); }
+.status-pill.unpaid { background: var(--overdue-100); color: var(--overdue-600); }
+.status-pill.none { background: var(--paper-100); color: var(--ink-400); }
 </style>

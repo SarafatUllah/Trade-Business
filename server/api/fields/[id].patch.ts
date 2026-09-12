@@ -4,13 +4,15 @@ import { prisma } from '../../utils/prisma'
 import { logAudit } from '../../utils/audit'
 import { validateFormula, resolveCalculationOrder, extractDependencies, CircularDependencyError } from '../../utils/formula'
 
-const FIELD_TYPES = ['TEXT', 'LONG_TEXT', 'NUMBER', 'CURRENCY', 'DATE', 'DATETIME', 'DROPDOWN', 'STATUS', 'BOOLEAN', 'FORMULA'] as const
+const FIELD_TYPES = ['TEXT', 'LONG_TEXT', 'NUMBER', 'CURRENCY', 'DATE', 'DATETIME', 'DROPDOWN', 'STATUS', 'BOOLEAN', 'FORMULA', 'AUTO_STATUS'] as const
 
 const schema = z.object({
   label: z.string().min(1).max(100).optional(),
   key: z.string().regex(/^[a-z][a-z0-9_]*$/, 'Key must be snake_case, starting with a letter').optional(),
   type: z.enum(FIELD_TYPES).optional(),
   formula: z.string().max(500).optional(),
+  statusTotalKey: z.string().optional(),
+  statusPaidKey: z.string().optional(),
   showInTable: z.boolean().optional(),
   showInInvoice: z.boolean().optional(),
   isFilterable: z.boolean().optional(),
@@ -37,25 +39,35 @@ export default defineEventHandler(async (event) => {
   const dependentFormulas = allActiveFields.filter(
     f => f.type === 'FORMULA' && f.id !== id && extractDependencies(f.formula || '').includes(existing.key)
   )
+  // AUTO_STATUS fields reference two other fields by key (not via formula
+  // text), so they need their own dependency check — same reasoning as
+  // formulas: renaming/archiving the referenced field would otherwise
+  // silently break the status calculation.
+  const dependentAutoStatus = allActiveFields.filter(
+    f => f.type === 'AUTO_STATUS' && f.id !== id && (f.statusTotalKey === existing.key || f.statusPaidKey === existing.key)
+  )
+  const allDependents = [...dependentFormulas, ...dependentAutoStatus]
 
   // Safety: a field cannot be archived, renamed, or have its type changed
-  // away from FORMULA while another active formula still depends on its
-  // current key — any of those would silently break those calculations.
+  // away from FORMULA while another active formula (or AUTO_STATUS field)
+  // still depends on its current key — any of those would silently break
+  // those calculations.
   const removingAsCalculableReference =
     data.isArchived === true ||
     (data.key !== undefined && data.key !== existing.key) ||
     (data.type !== undefined && data.type !== existing.type && existing.type === 'FORMULA' && data.type !== 'FORMULA')
 
-  if (removingAsCalculableReference && dependentFormulas.length) {
+  if (removingAsCalculableReference && allDependents.length) {
     // Renaming is actually safe IF we cascade the rename into dependents'
-    // formula text (handled below) — only block archiving or a type
-    // change away from FORMULA, which have no safe automatic fix.
+    // formula text / status references (handled below) — only block
+    // archiving or a type change away from FORMULA, which have no safe
+    // automatic fix.
     const isJustARename = data.key !== undefined && data.key !== existing.key &&
       data.isArchived !== true && !(data.type !== undefined && data.type !== existing.type)
     if (!isJustARename) {
       throw createError({
         statusCode: 409,
-        statusMessage: `Cannot do this to "${existing.label}" — used by formula field(s): ${dependentFormulas.map(d => d.label).join(', ')}`
+        statusMessage: `Cannot do this to "${existing.label}" — used by: ${allDependents.map(d => d.label).join(', ')}`
       })
     }
   }
@@ -86,6 +98,26 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // If (re)configuring AUTO_STATUS, validate its two references the same
+  // way creation does.
+  const becomingAutoStatus = data.type === 'AUTO_STATUS' || (data.type === undefined && existing.type === 'AUTO_STATUS')
+  if (becomingAutoStatus && (data.statusTotalKey !== undefined || data.statusPaidKey !== undefined || data.type === 'AUTO_STATUS')) {
+    const totalKey = data.statusTotalKey ?? existing.statusTotalKey
+    const paidKey = data.statusPaidKey ?? existing.statusPaidKey
+    if (!totalKey || !paidKey) {
+      throw createError({ statusCode: 400, statusMessage: 'A Payment Status field needs both a total/due field and a paid field selected' })
+    }
+    const summableTypes = ['NUMBER', 'CURRENCY', 'FORMULA']
+    const totalField = allActiveFields.find(f => f.key === totalKey)
+    const paidField = allActiveFields.find(f => f.key === paidKey)
+    if (!totalField || !summableTypes.includes(totalField.type)) {
+      throw createError({ statusCode: 400, statusMessage: 'The total/due field must be an existing Number, Currency, or Formula field' })
+    }
+    if (!paidField || !summableTypes.includes(paidField.type)) {
+      throw createError({ statusCode: 400, statusMessage: 'The paid field must be an existing Number, Currency, or Formula field' })
+    }
+  }
+
   // Bug fix: archiving previously left the field's `key` untouched, but the
   // database's unique constraint on (businessId, entity, key) still applied
   // to archived rows — so re-adding a field with the same key later failed
@@ -107,14 +139,24 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Cascade a key rename into every dependent formula's stored text so
-    // they keep working under the new name, instead of silently breaking.
-    if (data.key !== undefined && data.key !== existing.key && dependentFormulas.length) {
+    // Cascade a key rename into every dependent formula's stored text, and
+    // every dependent AUTO_STATUS field's total/paid reference, so they
+    // keep working under the new name instead of silently breaking.
+    if (data.key !== undefined && data.key !== existing.key && allDependents.length) {
       const wordBoundary = new RegExp(`\\b${existing.key}\\b`, 'g')
       for (const dep of dependentFormulas) {
         await tx.fieldDefinition.update({
           where: { id: dep.id },
           data: { formula: (dep.formula || '').replace(wordBoundary, data.key!) }
+        })
+      }
+      for (const dep of dependentAutoStatus) {
+        await tx.fieldDefinition.update({
+          where: { id: dep.id },
+          data: {
+            statusTotalKey: dep.statusTotalKey === existing.key ? data.key : dep.statusTotalKey,
+            statusPaidKey: dep.statusPaidKey === existing.key ? data.key : dep.statusPaidKey
+          }
         })
       }
     }

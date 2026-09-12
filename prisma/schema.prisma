@@ -152,6 +152,7 @@ enum FieldType {
   STATUS
   BOOLEAN
   FORMULA
+  AUTO_STATUS // derives Paid/Partially Paid/Unpaid by comparing two other fields — never user-entered, like FORMULA
 }
 
 // A user-defined column. Core accounting truth (Payable/Receivable/Payment/
@@ -166,6 +167,8 @@ model FieldDefinition {
   type         FieldType
   options      String? // JSON array of {value,label} for DROPDOWN/STATUS
   formula      String? // raw formula expression for FORMULA fields
+  statusTotalKey String? // AUTO_STATUS only: key of the field holding the total/due amount
+  statusPaidKey  String? // AUTO_STATUS only: key of the field holding the amount paid so far
   isRequired   Boolean     @default(false)
   showInTable  Boolean     @default(true)
   showInInvoice Boolean    @default(false)

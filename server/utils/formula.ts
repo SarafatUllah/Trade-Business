@@ -239,6 +239,24 @@ export function validateFormula(expr: string, knownKeys: string[]): { valid: boo
  * raw input values, computes every formula field's value in dependency
  * order and returns a full key->Decimal map (inputs included, coerced).
  */
+export type AutoPaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID'
+
+/** Pure comparison used by AUTO_STATUS fields — mirrors the same
+ *  Paid/Partially Paid/Unpaid logic used for real Payable/Receivable
+ *  records (see server/utils/status.ts), but works on any two arbitrary
+ *  custom fields instead, for businesses that track due/paid entirely
+ *  via their own Ledger fields rather than the built-in Payable system.
+ *  Lives here (not in server/utils/fields.ts) specifically so it stays
+ *  importable from client-side code (see useLiveFormulas.ts) without
+ *  pulling in fields.ts's Prisma dependency into the browser bundle. */
+export function computeAutoPaymentStatus(total: number | null | undefined, paid: number | null | undefined): AutoPaymentStatus | null {
+  if (total === null || total === undefined || Number.isNaN(total)) return null
+  const paidAmount = paid ?? 0
+  if (paidAmount <= 0) return 'UNPAID'
+  if (paidAmount >= total) return 'PAID'
+  return 'PARTIALLY_PAID'
+}
+
 export function computeRow(
   fields: FormulaFieldDef[] & { }[],
   allFieldKeys: string[],

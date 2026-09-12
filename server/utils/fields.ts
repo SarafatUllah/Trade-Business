@@ -1,6 +1,6 @@
 import type { FieldDefinition, FieldEntity } from '@prisma/client'
 import { prisma } from './prisma'
-import { resolveCalculationOrder, evaluateFormula, type FormulaFieldDef } from './formula'
+import { resolveCalculationOrder, evaluateFormula, computeAutoPaymentStatus, type FormulaFieldDef } from './formula'
 import { toApiNumber } from './money'
 
 export async function getActiveFields(businessId: string, entity: FieldEntity): Promise<FieldDefinition[]> {
@@ -17,7 +17,7 @@ export async function setFieldValues(
   recordId: string,
   rawValues: Record<string, unknown>
 ) {
-  const writable = fields.filter(f => f.type !== 'FORMULA' && f.key in rawValues)
+  const writable = fields.filter(f => f.type !== 'FORMULA' && f.type !== 'AUTO_STATUS' && f.key in rawValues)
   await prisma.$transaction(
     writable.map(field => {
       const value = rawValues[field.key]
@@ -64,9 +64,12 @@ export async function getRawFieldValues(fields: FieldDefinition[], recordId: str
   return result
 }
 
-/** Reads raw values and computes every formula field in dependency order,
- *  returning a flat key -> display value map. Never throws on incomplete
- *  data or circular refs it hasn't already validated at save-time. */
+/** Reads raw values and computes every formula field (in dependency
+ *  order) and every AUTO_STATUS field, returning a flat key -> display
+ *  value map. Never throws on incomplete data or circular refs it hasn't
+ *  already validated at save-time. AUTO_STATUS is computed after all
+ *  formulas resolve, since its total/paid reference can itself be a
+ *  FORMULA field (e.g. a calculated "Net Amount"). */
 export async function getComputedFieldValues(fields: FieldDefinition[], recordId: string): Promise<Record<string, unknown>> {
   const raw = await getRawFieldValues(fields, recordId)
   const formulaFields: FormulaFieldDef[] = fields
@@ -80,6 +83,14 @@ export async function getComputedFieldValues(fields: FieldDefinition[], recordId
     const computed = evaluateFormula(def.formula, result)
     result[key] = toApiNumber(computed)
   }
+
+  for (const f of fields) {
+    if (f.type !== 'AUTO_STATUS') continue
+    const total = typeof result[f.statusTotalKey || ''] === 'number' ? (result[f.statusTotalKey!] as number) : null
+    const paid = typeof result[f.statusPaidKey || ''] === 'number' ? (result[f.statusPaidKey!] as number) : null
+    result[f.key] = computeAutoPaymentStatus(total, paid)
+  }
+
   return result
 }
 
@@ -92,7 +103,7 @@ export async function getComputedFieldValues(fields: FieldDefinition[], recordId
  *  valid, deliberate value and is never treated as missing. */
 export function findMissingRequiredFields(fields: FieldDefinition[], values: Record<string, unknown>): FieldDefinition[] {
   return fields.filter(f => {
-    if (!f.isRequired || f.type === 'FORMULA') return false
+    if (!f.isRequired || f.type === 'FORMULA' || f.type === 'AUTO_STATUS') return false
     const v = values[f.key]
     if (f.type === 'BOOLEAN') return v === undefined || v === null
     return v === undefined || v === null || v === ''

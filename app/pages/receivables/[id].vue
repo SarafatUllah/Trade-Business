@@ -75,8 +75,8 @@
         v-for="f in data.fieldDefs"
         :key="f.id"
         :field="f"
-        :model-value="f.type === 'FORMULA' ? undefined : editValues[f.key]"
-        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        :model-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? undefined : editValues[f.key]"
+        :computed-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? liveFormulas[f.key] : undefined"
         :force-validate="forceValidate"
         @update:model-value="(v) => (editValues[f.key] = v)"
       />
@@ -141,7 +141,7 @@ async function onSaveDetails() {
   forceValidate.value = true
   const missingCore = !editAmount.value || !editExpectedDate.value
   const missingCustom = fieldDefsRef.value.some((f: any) => {
-    if (!f.isRequired || f.type === 'FORMULA') return false
+    if (!f.isRequired || ['FORMULA','AUTO_STATUS'].includes(f.type)) return false
     const v = editValues[f.key]
     return v === undefined || v === null || v === ''
   })

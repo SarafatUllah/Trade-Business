@@ -29,8 +29,8 @@
         v-for="f in fields"
         :key="f.id"
         :field="f"
-        :model-value="f.type === 'FORMULA' ? undefined : values[f.key]"
-        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        :model-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? undefined : values[f.key]"
+        :computed-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? liveFormulas[f.key] : undefined"
         :force-validate="forceValidate"
         @update:model-value="(v) => (values[f.key] = v)"
       />
@@ -66,7 +66,7 @@ const liveFormulas = useLiveFormulas(fields, values)
 // like an unintended default was pre-selected even though nothing was.
 watch(fields, (list) => {
   for (const f of list) {
-    if (f.type === 'FORMULA') continue
+    if (['FORMULA','AUTO_STATUS'].includes(f.type)) continue
     if (!(f.key in values)) {
       values[f.key] = f.type === 'BOOLEAN' ? false : ''
     }
@@ -77,7 +77,7 @@ const router = useRouter()
 
 function hasMissingRequiredField() {
   return fields.value.some(f => {
-    if (!f.isRequired || f.type === 'FORMULA') return false
+    if (!f.isRequired || ['FORMULA','AUTO_STATUS'].includes(f.type)) return false
     const v = values[f.key]
     return v === undefined || v === null || v === ''
   })

@@ -46,8 +46,8 @@
         v-for="f in data.fieldDefs"
         :key="f.id"
         :field="f"
-        :model-value="f.type === 'FORMULA' ? undefined : editValues[f.key]"
-        :computed-value="f.type === 'FORMULA' ? liveFormulas[f.key] : undefined"
+        :model-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? undefined : editValues[f.key]"
+        :computed-value="['FORMULA','AUTO_STATUS'].includes(f.type) ? liveFormulas[f.key] : undefined"
         @update:model-value="(v) => (editValues[f.key] = v)"
       />
       <button class="btn block" type="submit" :disabled="saving"><span>{{ saving ? 'Saving…' : 'Save changes' }}</span><ButtonSpinner v-if="saving" /></button>

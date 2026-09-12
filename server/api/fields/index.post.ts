@@ -8,9 +8,11 @@ const schema = z.object({
   entity: z.enum(['TRANSACTION', 'PAYABLE', 'RECEIVABLE']).default('TRANSACTION'),
   key: z.string().regex(/^[a-z][a-z0-9_]*$/, 'Key must be snake_case, starting with a letter'),
   label: z.string().min(1).max(100),
-  type: z.enum(['TEXT', 'LONG_TEXT', 'NUMBER', 'CURRENCY', 'DATE', 'DATETIME', 'DROPDOWN', 'STATUS', 'BOOLEAN', 'FORMULA']),
+  type: z.enum(['TEXT', 'LONG_TEXT', 'NUMBER', 'CURRENCY', 'DATE', 'DATETIME', 'DROPDOWN', 'STATUS', 'BOOLEAN', 'FORMULA', 'AUTO_STATUS']),
   options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   formula: z.string().max(500).optional(),
+  statusTotalKey: z.string().optional(),
+  statusPaidKey: z.string().optional(),
   isRequired: z.boolean().optional(),
   showInTable: z.boolean().optional(),
   showInInvoice: z.boolean().optional(),
@@ -53,6 +55,21 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (data.type === 'AUTO_STATUS') {
+    if (!data.statusTotalKey || !data.statusPaidKey) {
+      throw createError({ statusCode: 400, statusMessage: 'A Payment Status field needs both a total/due field and a paid field selected' })
+    }
+    const summableTypes = ['NUMBER', 'CURRENCY', 'FORMULA']
+    const totalField = existingFields.find(f => f.key === data.statusTotalKey)
+    const paidField = existingFields.find(f => f.key === data.statusPaidKey)
+    if (!totalField || !summableTypes.includes(totalField.type)) {
+      throw createError({ statusCode: 400, statusMessage: 'The total/due field must be an existing Number, Currency, or Formula field' })
+    }
+    if (!paidField || !summableTypes.includes(paidField.type)) {
+      throw createError({ statusCode: 400, statusMessage: 'The paid field must be an existing Number, Currency, or Formula field' })
+    }
+  }
+
   const maxOrder = existingFields.reduce((m, f) => Math.max(m, f.sortOrder), -1)
 
   const field = await prisma.fieldDefinition.create({
@@ -64,6 +81,8 @@ export default defineEventHandler(async (event) => {
       type: data.type,
       options: data.options ? JSON.stringify(data.options) : null,
       formula: data.formula ?? null,
+      statusTotalKey: data.type === 'AUTO_STATUS' ? data.statusTotalKey : null,
+      statusPaidKey: data.type === 'AUTO_STATUS' ? data.statusPaidKey : null,
       isRequired: data.isRequired ?? false,
       showInTable: data.showInTable ?? true,
       showInInvoice: data.showInInvoice ?? false,
