@@ -18,7 +18,8 @@
       <NuxtLink v-for="p in filtered" :key="p.id" :to="`/parties/${p.id}`" class="activity-row">
         <div class="activity-icon" :class="p.type === 'SELLER' ? 'receivable' : 'payable'"><Factory :size="17" :stroke-width="2.2" /></div>
         <div class="row-main">
-          <strong>{{ p.name }} <span class="type-tag" :class="p.type === 'SELLER' ? 'seller' : 'buyer'">{{ p.type }}</span></strong>
+          <strong>{{ p.name }}</strong>
+          <span class="type-tag" :class="p.type === 'SELLER' ? 'seller' : 'buyer'">{{ p.type }}</span>
           <small v-if="p.phone">{{ p.phone }}</small>
         </div>
         <div class="amounts">
@@ -76,7 +77,7 @@ const filtered = computed(() => {
 .activity-icon.payable { background: var(--payable-100); color: var(--payable-600); }
 .row-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .row-main small { color: var(--ink-400); }
-.type-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; vertical-align: middle; }
+.type-tag { align-self: flex-start; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; margin-top: 2px; }
 .type-tag.seller { background: var(--receivable-100); color: var(--receivable-600); }
 .type-tag.buyer { background: var(--payable-100); color: var(--payable-600); }
 .amounts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
