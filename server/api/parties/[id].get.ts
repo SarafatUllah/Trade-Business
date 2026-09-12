@@ -55,13 +55,27 @@ export default defineEventHandler(async (event) => {
   // per-entry breakdown without a wide table.
   const transactionFieldDefs = await getActiveFields(session.businessId, 'TRANSACTION')
   const tableFieldDefs = transactionFieldDefs.filter(f => f.showInTable)
+  const invoiceFieldDefs = transactionFieldDefs.filter(f => f.showInInvoice)
+  const currencyInvoiceCols = invoiceFieldDefs.filter(f => f.type === 'CURRENCY' || f.type === 'FORMULA')
+  // Compute against ALL active transaction fields, not just the ones
+  // marked for table/invoice display — a FORMULA field's dependencies
+  // (e.g. "net_amount" referencing "gross_amount") might not themselves
+  // be flagged showInTable/showInInvoice, and getComputedFieldValues only
+  // resolves formulas whose dependencies are present in the field set
+  // it's given. Subsetting happens after computing, not before.
+
+  let totalAmountFromEntries = toMoney(0)
   const entries = await Promise.all(
-    party.transactions.map(async (t) => ({
-      id: t.id,
-      date: t.date,
-      description: t.description,
-      fields: tableFieldDefs.length ? await getComputedFieldValues(tableFieldDefs, t.id) : {}
-    }))
+    party.transactions.map(async (t) => {
+      const allValues = transactionFieldDefs.length ? await getComputedFieldValues(transactionFieldDefs, t.id) : {}
+      for (const col of currencyInvoiceCols) {
+        const v = allValues[col.key]
+        if (typeof v === 'number') totalAmountFromEntries = totalAmountFromEntries.plus(v)
+      }
+      const displayValues: Record<string, unknown> = {}
+      for (const f of tableFieldDefs) displayValues[f.key] = allValues[f.key]
+      return { id: t.id, date: t.date, description: t.description, fields: displayValues }
+    })
   )
 
   return {
@@ -73,6 +87,7 @@ export default defineEventHandler(async (event) => {
     entryFieldDefs: tableFieldDefs.map(f => ({ key: f.key, label: f.label, type: f.type })),
     invoices: party.invoices.map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, totalAmount: toApiNumber(i.totalAmount), createdAt: i.createdAt })),
     summary: {
+      totalAmountFromEntries: toApiNumber(totalAmountFromEntries),
       totalPayable: toApiNumber(totalPayable),
       totalReceivable: toApiNumber(totalReceivable),
       totalPaid: toApiNumber(totalPaid),

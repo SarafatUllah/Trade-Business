@@ -90,12 +90,12 @@
 
       <h3 class="section-title">Summary</h3>
       <div class="card full-bleed summary">
+        <div class="row"><span class="label">Total Amount</span><span class="value num">{{ format(data.summary.totalAmountFromEntries) }}</span></div>
+        <div class="row"><span class="label">Total Paid</span><span class="value num">{{ format(data.summary.totalPaid) }}</span></div>
         <template v-if="data.party.type === 'SELLER'">
-          <div class="row"><span class="label">Total Amount</span><span class="value num">{{ format(data.summary.totalReceivable) }}</span></div>
           <div class="row"><span class="label">Total Received</span><span class="value num">{{ format(data.summary.totalReceived) }}</span></div>
         </template>
         <template v-else>
-          <div class="row"><span class="label">Total Amount</span><span class="value num">{{ format(data.summary.totalPayable) }}</span></div>
           <div class="row"><span class="label">Total Payable</span><span class="value num">{{ format(data.summary.outstandingPayable) }}</span></div>
         </template>
       </div>
