@@ -442,8 +442,9 @@ model InvoiceItem {
   payableId    String?
   receivableId String?
   description  String?
+  date         DateTime? // the underlying transaction's date, frozen at generation time — shown next to each entry's serial number
   amount       Decimal
-  snapshot     String // JSON snapshot of the row's dynamic field values at invoice time
+  snapshot     String // JSON snapshot of the row's dynamic field values at invoice time — captures ALL active fields (not just the ones shown as invoice columns), so a summary line added later can still be computed correctly from historical invoices
 
   invoice    Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   payable    Payable?    @relation(fields: [payableId], references: [id])

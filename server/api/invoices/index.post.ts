@@ -47,8 +47,13 @@ export default defineEventHandler(async (event) => {
     ? allFields.filter(f => data.columnKeys!.includes(f.key))
     : allFields.filter(f => f.showInInvoice)
 
+  // Snapshot ALL active fields (not just the ones chosen as visible
+  // invoice columns) — a "Party summary" line added after this invoice
+  // was generated might reference a field that wasn't flagged
+  // show-in-invoice back then, and this keeps historical invoices able
+  // to compute it correctly instead of silently showing zero.
   const rows = await Promise.all(
-    transactions.map(async (t) => ({ transactionId: t.id, values: await getComputedFieldValues(invoiceFields, t.id) }))
+    transactions.map(async (t) => ({ transactionId: t.id, date: t.date, values: await getComputedFieldValues(allFields, t.id) }))
   )
 
   // Total amount: sum of any CURRENCY-typed invoice column found on each row
@@ -89,6 +94,7 @@ export default defineEventHandler(async (event) => {
         data: {
           invoiceId: created.id,
           transactionId: row.transactionId,
+          date: row.date,
           amount: (() => {
             let sum = toMoney(0)
             for (const col of currencyCols) {

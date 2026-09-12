@@ -7,14 +7,33 @@
         <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>
     </div>
-    <div class="field-row">
+    <div class="field">
+      <label>Period</label>
+      <div class="filter-mode-row">
+        <button v-for="m in filterModes" :key="m.value" type="button" class="chip" :class="{ active: filterMode === m.value }" @click="filterMode = m.value">{{ m.label }}</button>
+      </div>
+    </div>
+
+    <div v-if="filterMode === 'day'" class="field">
+      <label>Day</label>
+      <input v-model="filterDay" type="date" @change="loadTransactions" />
+    </div>
+    <div v-if="filterMode === 'month'" class="field">
+      <label>Month</label>
+      <input v-model="filterMonth" type="month" @change="loadTransactions" />
+    </div>
+    <div v-if="filterMode === 'year'" class="field">
+      <label>Year</label>
+      <input v-model="filterYear" type="number" min="2000" max="2100" step="1" @change="loadTransactions" />
+    </div>
+    <div v-if="filterMode === 'range'" class="field-row">
       <div class="field">
         <label>From</label>
-        <input v-model="periodStart" type="date" @change="loadTransactions" />
+        <input v-model="filterFrom" type="date" @change="loadTransactions" />
       </div>
       <div class="field">
         <label>To</label>
-        <input v-model="periodEnd" type="date" @change="loadTransactions" />
+        <input v-model="filterTo" type="date" @change="loadTransactions" />
       </div>
     </div>
 
@@ -54,8 +73,44 @@ const { data: parties } = await useFetch('/api/parties')
 const { data: allFields } = await useFetch('/api/fields', { query: { entity: 'TRANSACTION' } })
 
 const partyId = ref((route.query.partyId as string) || '')
-const periodStart = ref('')
-const periodEnd = ref('')
+const filterModes = [
+  { value: '', label: 'All time' },
+  { value: 'day', label: 'Day' },
+  { value: 'month', label: 'Month' },
+  { value: 'year', label: 'Year' },
+  { value: 'range', label: 'Range' }
+]
+const filterMode = ref('')
+const filterDay = ref('')
+const filterMonth = ref('')
+const filterYear = ref(new Date().getFullYear())
+const filterFrom = ref('')
+const filterTo = ref('')
+
+// Derives the actual from/to dates sent to the server from whichever
+// filter mode is active — kept as plain refs (not a computed) since
+// they're what gets sent in the generate-invoice request body too.
+const periodStart = computed(() => {
+  if (filterMode.value === 'day') return filterDay.value
+  if (filterMode.value === 'month' && filterMonth.value) {
+    const [y, m] = filterMonth.value.split('-').map(Number)
+    return new Date(y, m - 1, 1).toISOString().slice(0, 10)
+  }
+  if (filterMode.value === 'year' && filterYear.value) return `${filterYear.value}-01-01`
+  if (filterMode.value === 'range') return filterFrom.value
+  return ''
+})
+const periodEnd = computed(() => {
+  if (filterMode.value === 'day') return filterDay.value
+  if (filterMode.value === 'month' && filterMonth.value) {
+    const [y, m] = filterMonth.value.split('-').map(Number)
+    return new Date(y, m, 0).toISOString().slice(0, 10)
+  }
+  if (filterMode.value === 'year' && filterYear.value) return `${filterYear.value}-12-31`
+  if (filterMode.value === 'range') return filterTo.value
+  return ''
+})
+watch(filterMode, () => loadTransactions())
 const transactions = ref<any[]>([])
 const selectedTxIds = ref<string[]>([])
 const selectedColumns = ref<string[]>([])
@@ -117,6 +172,12 @@ async function onGenerate() {
 
 <style scoped>
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.filter-mode-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter-mode-row .chip {
+  padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line);
+  background: white; font-size: 13px; font-weight: 600; color: var(--ink-700);
+}
+.filter-mode-row .chip.active { background: var(--ink-900); color: white; border-color: var(--ink-900); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--ink-700); }
 .chip.active { background: var(--ink-900); color: white; border-color: var(--ink-900); }

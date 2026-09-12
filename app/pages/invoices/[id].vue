@@ -1,8 +1,13 @@
 <template>
   <div v-if="data">
     <div class="card invoice-head">
-      <h2>{{ data.invoiceNumber }}</h2>
-      <p>{{ data.business.name }}</p>
+      <div class="head-top">
+        <div>
+          <h2>{{ data.invoiceNumber }}</h2>
+          <p>{{ data.business.name }}</p>
+        </div>
+        <button class="btn secondary small danger" @click="onDelete">Delete</button>
+      </div>
       <p class="muted">Bill to: {{ data.party.name }}</p>
       <p v-if="data.periodStart" class="muted">
         Period: {{ formatDate(data.periodStart) }} – {{ formatDate(data.periodEnd) }}
@@ -18,19 +23,23 @@
          entry as a stacked label/value card removes the wide-content
          problem at its source instead of trying to contain it. -->
     <div v-for="(row, i) in data.rows" :key="i" class="card entry-card">
-      <div class="entry-index">#{{ i + 1 }}</div>
+      <div class="entry-index">#{{ i + 1 }} · {{ formatDate(row.date) }}</div>
       <div v-for="c in data.columns" :key="c.key" class="entry-row">
         <span class="entry-label">{{ c.label }}</span>
-        <span class="entry-value num">{{ display(row[c.key]) }}</span>
+        <span class="entry-value num">{{ display(row.values[c.key]) }}</span>
       </div>
     </div>
 
-    <h3 class="section-title">Summary</h3>
-    <div class="card summary">
-      <div class="row"><span class="label">Total Amount</span><span class="value num">{{ format(data.summary?.totalAmount ?? 0) }}</span></div>
-      <div class="row"><span class="label">Total Paid</span><span class="value num">{{ format(data.summary?.totalPaid ?? 0) }}</span></div>
-      <div class="row"><span class="label">Total Received</span><span class="value num">{{ format(data.summary?.totalReceived ?? 0) }}</span></div>
-    </div>
+    <template v-if="data.summaryFields.length">
+      <h3 class="section-title">Summary</h3>
+      <div class="card summary">
+        <div v-for="sf in data.summaryFields" :key="sf.id" class="row">
+          <span class="label">{{ sf.label }}</span>
+          <span class="value num">{{ format(sf.total) }}</span>
+        </div>
+      </div>
+      <p class="summary-hint"><NuxtLink to="/settings/summary-fields">Edit these totals</NuxtLink> in Settings → Party summary.</p>
+    </template>
 
     <a :href="`/api/invoices/${route.params.id}/pdf`" class="btn block" target="_blank" rel="noopener">
       Download PDF
@@ -40,6 +49,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
+const router = useRouter()
 const { format } = useCurrency()
 const { data } = await useFetch(`/api/invoices/${route.params.id}`)
 
@@ -57,13 +67,23 @@ function display(v: unknown) {
   }
   return s
 }
+
+async function onDelete() {
+  if (!data.value) return
+  if (!confirm(`Delete invoice ${data.value.invoiceNumber}? This cannot be undone.`)) return
+  await $fetch(`/api/invoices/${route.params.id}`, { method: 'DELETE' })
+  router.push('/invoices')
+}
 </script>
 
 <style scoped>
 .invoice-head { margin-bottom: 16px; }
+.head-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .invoice-head h2 { font-size: 20px; }
 .invoice-head p { margin: 2px 0 0; }
 .muted { color: var(--ink-400); font-size: 13px; }
+.btn.small { padding: 6px 10px; min-height: auto; font-size: 12px; box-shadow: none; flex-shrink: 0; }
+.btn.danger { color: var(--overdue-600); border-color: var(--overdue-600); }
 
 .section-title { font-size: 15px; margin: 0 0 8px; color: var(--ink-700); }
 
@@ -84,7 +104,7 @@ function display(v: unknown) {
 .entry-label { color: var(--ink-400); font-size: 13px; min-width: 0; }
 .entry-value { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 
-.summary { margin-bottom: 16px; }
+.summary { margin-bottom: 4px; }
 .summary .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -94,4 +114,6 @@ function display(v: unknown) {
 }
 .summary .label { color: var(--ink-700); }
 .summary .value { text-align: right; font-weight: 700; }
+.summary-hint { font-size: 12px; color: var(--ink-400); margin: 6px 0 16px; }
+.summary-hint a { color: var(--focus); font-weight: 600; }
 </style>
