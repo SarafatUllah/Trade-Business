@@ -6,9 +6,9 @@ import { getActiveFields } from '../../utils/fields'
 const schema = z.object({
   label: z.string().min(1).max(100).optional(),
   kind: z.enum(['SUM', 'STATUS']).optional(),
-  sourceKey: z.string().min(1).optional(),
-  statusTotalSummaryId: z.string().min(1).optional(),
-  statusPaidSummaryId: z.string().min(1).optional(),
+  sourceKey: z.string().optional(),
+  statusTotalSummaryId: z.string().optional(),
+  statusPaidSummaryId: z.string().optional(),
   sortOrder: z.number().int().optional()
 })
 
@@ -60,9 +60,18 @@ export default defineEventHandler(async (event) => {
         : { sourceKey: null })
     : {}
 
+  // The edit form always submits sourceKey/statusTotalSummaryId/
+  // statusPaidSummaryId together regardless of which ones are actually
+  // relevant to the row's kind — normalize any irrelevant '' to null
+  // rather than writing an empty string into a nullable reference column.
+  const sanitized = { ...parsed.data }
+  for (const key of ['sourceKey', 'statusTotalSummaryId', 'statusPaidSummaryId'] as const) {
+    if (sanitized[key] === '') sanitized[key] = null as any
+  }
+
   const updated = await prisma.summaryFieldDefinition.update({
     where: { id },
-    data: { ...parsed.data, ...kindSwitchCleanup }
+    data: { ...sanitized, ...kindSwitchCleanup }
   })
   return updated
 })

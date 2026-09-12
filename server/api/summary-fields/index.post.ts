@@ -6,9 +6,14 @@ import { getActiveFields } from '../../utils/fields'
 const schema = z.object({
   label: z.string().min(1).max(100),
   kind: z.enum(['SUM', 'STATUS']).default('SUM'),
-  sourceKey: z.string().min(1).optional(),
-  statusTotalSummaryId: z.string().min(1).optional(),
-  statusPaidSummaryId: z.string().min(1).optional()
+  // Deliberately NOT .min(1) here — the form always sends all three of
+  // these keys regardless of which kind is selected (the unused ones as
+  // ''), so a .min(1) constraint rejected the request before it even
+  // reached the kind-specific checks below, which already correctly
+  // treat an empty string as "not provided" via a plain falsy check.
+  sourceKey: z.string().optional(),
+  statusTotalSummaryId: z.string().optional(),
+  statusPaidSummaryId: z.string().optional()
 })
 
 export default defineEventHandler(async (event) => {
