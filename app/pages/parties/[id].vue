@@ -46,6 +46,7 @@
         <NuxtLink v-if="data.party.type === 'SELLER'" :to="`/receivables/new?partyId=${data.party.id}`" class="btn receivable block">+ Receivable</NuxtLink>
         <NuxtLink v-else :to="`/payables/new?partyId=${data.party.id}`" class="btn payable block">+ Payable</NuxtLink>
       </div>
+      <NuxtLink :to="`/transactions/new?partyId=${data.party.id}`" class="btn secondary block add-entry-btn">+ Add ledger entry</NuxtLink>
 
       <h3 class="section-title">{{ data.party.type === 'SELLER' ? 'Receivables' : 'Payables' }}</h3>
       <div class="card full-bleed list-card">
@@ -113,6 +114,9 @@
           <span class="entry-label">{{ f.label }}</span>
           <span class="entry-value num">{{ displayField(entry.fields[f.key]) }}</span>
         </div>
+        <NuxtLink :to="`/transactions/new?duplicateFrom=${entry.id}&partyId=${data.party.id}`" class="duplicate-btn">
+          <CopyPlus :size="14" :stroke-width="2.2" /> Duplicate
+        </NuxtLink>
       </div>
 
       <template v-if="data.summaryFields.length">
@@ -146,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronRight, FileText } from '@lucide/vue'
+import { ChevronRight, FileText, CopyPlus } from '@lucide/vue'
 const route = useRoute()
 const { format } = useCurrency()
 
@@ -273,7 +277,8 @@ function statusPillClass(v: string | null) {
 .stat.full { width: 100%; }
 .stat small { color: var(--ink-400); font-size: 12px; font-weight: 600; }
 .stat strong { font-size: 22px; }
-.quick-actions { margin-bottom: 18px; }
+.quick-actions { margin-bottom: 12px; }
+.add-entry-btn { display: block; margin-bottom: 18px; }
 .section-title { font-size: 15px; margin: 16px 0 8px; color: var(--ink-700); }
 .list-card { padding: 4px 12px; }
 .row-main { display: flex; flex-direction: column; gap: 4px; }
@@ -304,6 +309,12 @@ function statusPillClass(v: string | null) {
 .entry-row:last-child { border-bottom: none; }
 .entry-label { color: var(--ink-400); font-size: 13px; min-width: 0; }
 .entry-value { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.duplicate-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 10px; padding: 8px; border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--line); color: var(--accent);
+  font-size: 12px; font-weight: 600;
+}
 
 .summary { margin-bottom: 4px; }
 .summary .row {

@@ -30,6 +30,12 @@
         <p v-if="!data.party" class="bridge-hint muted">Assign a party to this entry first to link a payable/receivable.</p>
       </div>
 
+      <div class="quick-row">
+        <NuxtLink :to="`/transactions/new?duplicateFrom=${data.id}${data.party ? `&partyId=${data.party.id}` : ''}`" class="btn secondary block">
+          <CopyPlus :size="16" :stroke-width="2.2" /> Duplicate this entry
+        </NuxtLink>
+      </div>
+
       <button class="btn secondary block danger" @click="onArchive">Archive entry</button>
     </template>
 
@@ -56,6 +62,7 @@
 </template>
 
 <script setup lang="ts">
+import { CopyPlus } from '@lucide/vue'
 const route = useRoute()
 const router = useRouter()
 const editing = ref(false)
@@ -119,5 +126,7 @@ function display(v: unknown) {
 .bridge-hint.muted { text-align: center; }
 .bridge-buttons { display: flex; gap: 10px; margin-bottom: 12px; }
 .bridge-buttons .btn { flex: 1; }
+.quick-row { margin-bottom: 12px; }
+.quick-row .btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .danger { background: var(--overdue-600); }
 </style>
