@@ -71,9 +71,36 @@
         </template>
       </div>
 
-      <h3 class="section-title">Entries ({{ data.entries.length }})</h3>
-      <EmptyState v-if="!data.entries.length" :icon="FileText" message="No ledger entries yet" />
-      <div v-for="(entry, i) in data.entries" :key="entry.id" class="card entry-card">
+      <h3 class="section-title">Entries</h3>
+
+      <div class="card full-bleed filter-card">
+        <div class="filter-mode-row">
+          <button v-for="m in filterModes" :key="m.value" class="chip" :class="{ active: filterMode === m.value }" @click="filterMode = m.value">{{ m.label }}</button>
+        </div>
+
+        <div v-if="filterMode === 'day'" class="field">
+          <label>Day</label>
+          <input v-model="filterDay" type="date" />
+        </div>
+        <div v-if="filterMode === 'month'" class="field">
+          <label>Month</label>
+          <input v-model="filterMonth" type="month" />
+        </div>
+        <div v-if="filterMode === 'range'" class="range-fields">
+          <div class="field"><label>From</label><input v-model="filterFrom" type="date" /></div>
+          <div class="field"><label>To</label><input v-model="filterTo" type="date" /></div>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn secondary" type="button" @click="resetFilter">Reset filter</button>
+          <button class="btn" type="button" @click="reverseOrder = !reverseOrder">
+            {{ reverseOrder ? 'Newest first' : 'Oldest first' }}
+          </button>
+        </div>
+      </div>
+
+      <EmptyState v-if="!orderedEntries.length" :icon="FileText" :message="hasActiveFilter ? 'No entries in this range' : 'No ledger entries yet'" />
+      <div v-for="(entry, i) in orderedEntries" :key="entry.id" class="card entry-card">
         <NuxtLink :to="`/transactions/${entry.id}`" class="entry-index-row">
           <span class="entry-index">#{{ i + 1 }} · {{ formatDate(entry.date) }}</span>
           <ChevronRight :size="16" :stroke-width="2.2" class="chevron" />
@@ -88,17 +115,18 @@
         </div>
       </div>
 
-      <h3 class="section-title">Summary</h3>
-      <div class="card full-bleed summary">
-        <div class="row"><span class="label">Total Amount</span><span class="value num">{{ format(data.summary.totalAmountFromEntries) }}</span></div>
-        <div class="row"><span class="label">Total Paid</span><span class="value num">{{ format(data.summary.totalPaid) }}</span></div>
-        <template v-if="data.party.type === 'SELLER'">
-          <div class="row"><span class="label">Total Received</span><span class="value num">{{ format(data.summary.totalReceived) }}</span></div>
-        </template>
-        <template v-else>
-          <div class="row"><span class="label">Total Payable</span><span class="value num">{{ format(data.summary.outstandingPayable) }}</span></div>
-        </template>
-      </div>
+      <template v-if="data.summaryFields.length">
+        <h3 class="section-title">Summary</h3>
+        <div class="card full-bleed summary">
+          <div v-for="sf in data.summaryFields" :key="sf.id" class="row">
+            <span class="label">{{ sf.label }}</span>
+            <span class="value num">{{ format(sf.total) }}</span>
+          </div>
+        </div>
+        <p class="summary-hint">
+          <NuxtLink to="/settings/summary-fields">Edit these totals</NuxtLink> in Settings → Party summary.
+        </p>
+      </template>
 
       <h3 class="section-title">Invoices</h3>
       <div class="card full-bleed list-card">
@@ -121,7 +149,56 @@
 import { ChevronRight, FileText } from '@lucide/vue'
 const route = useRoute()
 const { format } = useCurrency()
-const { data, refresh } = await useFetch(`/api/parties/${route.params.id}`)
+
+const filterModes = [
+  { value: '', label: 'All time' },
+  { value: 'day', label: 'Day' },
+  { value: 'month', label: 'Month' },
+  { value: 'range', label: 'Range' }
+]
+const filterMode = ref('')
+const filterDay = ref('')
+const filterMonth = ref('')
+const filterFrom = ref('')
+const filterTo = ref('')
+const reverseOrder = ref(false)
+
+const hasActiveFilter = computed(() => !!filterMode.value)
+
+const queryDates = computed(() => {
+  if (filterMode.value === 'day' && filterDay.value) return { from: filterDay.value, to: filterDay.value }
+  if (filterMode.value === 'month' && filterMonth.value) {
+    const [y, m] = filterMonth.value.split('-').map(Number)
+    const start = new Date(y, m - 1, 1)
+    const end = new Date(y, m, 0)
+    return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) }
+  }
+  if (filterMode.value === 'range' && (filterFrom.value || filterTo.value)) {
+    return { from: filterFrom.value || undefined, to: filterTo.value || undefined }
+  }
+  return {}
+})
+
+const { data, refresh } = await useFetch(`/api/parties/${route.params.id}`, {
+  query: computed(() => queryDates.value)
+})
+
+watch(queryDates, () => refresh())
+
+function resetFilter() {
+  filterMode.value = ''
+  filterDay.value = ''
+  filterMonth.value = ''
+  filterFrom.value = ''
+  filterTo.value = ''
+}
+
+// Entries arrive oldest-to-latest from the API by default; reverse
+// client-side for display only, so re-toggling doesn't need a refetch.
+const orderedEntries = computed(() => {
+  const list = data.value?.entries ?? []
+  return reverseOrder.value ? [...list].reverse() : list
+})
 
 const editing = ref(false)
 const editForm = reactive({ type: 'SELLER' as 'SELLER' | 'BUYER', name: '', phone: '', address: '', notes: '' })
@@ -192,6 +269,17 @@ function displayField(v: unknown) {
 .receivable-text { color: var(--receivable-600); font-weight: 700; }
 .payable-text { color: var(--payable-600); font-weight: 700; }
 
+.filter-card { padding: 14px; margin-bottom: 12px; }
+.filter-mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.filter-mode-row .chip {
+  padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line);
+  background: white; font-size: 13px; font-weight: 600; color: var(--ink-700);
+}
+.filter-mode-row .chip.active { background: var(--ink-900); color: white; border-color: var(--ink-900); }
+.range-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.filter-actions { display: flex; gap: 8px; margin-top: 10px; }
+.filter-actions .btn { flex: 1; }
+
 .entry-card { margin-bottom: 12px; padding-top: 12px; }
 .entry-index-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .entry-index { font-size: 11px; font-weight: 700; color: var(--ink-400); }
@@ -205,13 +293,15 @@ function displayField(v: unknown) {
 .entry-label { color: var(--ink-400); font-size: 13px; min-width: 0; }
 .entry-value { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 
-.summary { margin-bottom: 8px; }
+.summary { margin-bottom: 4px; }
 .summary .row {
   display: grid; grid-template-columns: minmax(0, 1fr) auto;
   align-items: center; gap: 12px; padding: 7px 0;
 }
 .summary .label { color: var(--ink-700); }
 .summary .value { text-align: right; font-weight: 700; }
+.summary-hint { font-size: 12px; color: var(--ink-400); margin: 6px 0 8px; }
+.summary-hint a { color: var(--focus); font-weight: 600; }
 
 .generate-invoice { margin-top: 20px; }
 </style>

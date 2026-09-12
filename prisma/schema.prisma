@@ -66,6 +66,7 @@ model Business {
   notifications Notification[]
   invoices    Invoice[]
   auditLogs   AuditLog[]
+  summaryFieldDefinitions SummaryFieldDefinition[]
 
   @@map("businesses")
 }
@@ -490,6 +491,26 @@ enum PlatformAdminRole {
 // have any path to a business User's password or session token. They can
 // only ever see profile/status info and act on account lifecycle
 // (activate/deactivate/delete), never "log in as" a business.
+// User-defined summary line for the Party detail page (and, per this
+// design, reusable anywhere a "sum of a column" total is wanted): a
+// label the user chooses plus which TRANSACTION field to sum. Replaces
+// a previously hardcoded Total Amount/Paid/Received — the user decides
+// how many lines exist, what each is called, and which column feeds it.
+model SummaryFieldDefinition {
+  id         String   @id @default(cuid())
+  businessId String
+  label      String
+  sourceKey  String // key of the TRANSACTION FieldDefinition to sum
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@map("summary_field_definitions")
+}
+
 model PlatformAdmin {
   id           String            @id @default(cuid())
   name         String

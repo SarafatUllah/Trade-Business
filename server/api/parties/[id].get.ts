@@ -10,13 +10,24 @@ import { toApiNumber, toMoney } from '../../utils/money'
 export default defineEventHandler(async (event) => {
   const session = requireSession(event)
   const id = getRouterParam(event, 'id')!
+  const query = getQuery(event)
+  const from = query.from ? new Date(query.from as string) : undefined
+  // "to" is inclusive of the whole day, so a range/day/month filter
+  // includes entries dated anywhere on the end date, not just at 00:00.
+  const to = query.to ? new Date(query.to as string) : undefined
+  if (to) to.setHours(23, 59, 59, 999)
 
   const party = await prisma.party.findFirst({
     where: { id, businessId: session.businessId },
     include: {
       payables: { include: { payments: true }, orderBy: { dueDate: 'desc' } },
       receivables: { include: { collections: true }, orderBy: { expectedDate: 'desc' } },
-      transactions: { orderBy: { date: 'desc' }, take: 100 },
+      transactions: {
+        where: {
+          ...(from || to ? { date: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {})
+        },
+        orderBy: { date: 'asc' } // oldest to latest by default; the client can reverse for display
+      },
       invoices: { orderBy: { createdAt: 'desc' } }
     }
   })
@@ -42,35 +53,36 @@ export default defineEventHandler(async (event) => {
     notes: r.notes
   }))
 
-  const totalPayable = party.payables.reduce((s, p) => s.plus(p.originalAmount as any), toMoney(0))
-  const totalReceivable = party.receivables.reduce((s, r) => s.plus(r.originalAmount as any), toMoney(0))
-  const totalPaid = party.payables.reduce((s, p) => s.plus(computePayablePaid(p)), toMoney(0))
-  const totalReceived = party.receivables.reduce((s, r) => s.plus(computeReceivableReceived(r)), toMoney(0))
   const outstandingPayable = payables.reduce((s, p) => s + p.remaining, 0)
   const outstandingReceivable = receivables.reduce((s, r) => s + r.remaining, 0)
 
   // Entries view (see the invoice preview's stacked-card layout, which
-  // this mirrors): each of this party's ledger transactions shown with
-  // its custom field values, so the Party page can show the same kind of
-  // per-entry breakdown without a wide table.
+  // this mirrors): each of this party's ledger transactions (within the
+  // requested date filter, if any) shown with its custom field values.
   const transactionFieldDefs = await getActiveFields(session.businessId, 'TRANSACTION')
   const tableFieldDefs = transactionFieldDefs.filter(f => f.showInTable)
-  const invoiceFieldDefs = transactionFieldDefs.filter(f => f.showInInvoice)
-  const currencyInvoiceCols = invoiceFieldDefs.filter(f => f.type === 'CURRENCY' || f.type === 'FORMULA')
-  // Compute against ALL active transaction fields, not just the ones
-  // marked for table/invoice display — a FORMULA field's dependencies
-  // (e.g. "net_amount" referencing "gross_amount") might not themselves
-  // be flagged showInTable/showInInvoice, and getComputedFieldValues only
-  // resolves formulas whose dependencies are present in the field set
-  // it's given. Subsetting happens after computing, not before.
 
-  let totalAmountFromEntries = toMoney(0)
+  // Summary lines are entirely user-defined (see Settings -> Party
+  // summary): each is "label" + "which field to sum", not a fixed set of
+  // hardcoded totals. Computed over the SAME filtered entry set as the
+  // Entries list, so applying a date filter updates both together.
+  const summaryDefs = await prisma.summaryFieldDefinition.findMany({
+    where: { businessId: session.businessId },
+    orderBy: { sortOrder: 'asc' }
+  })
+  const summaryTotals = new Map<string, ReturnType<typeof toMoney>>(summaryDefs.map(d => [d.id, toMoney(0)]))
+
   const entries = await Promise.all(
     party.transactions.map(async (t) => {
+      // Computed against ALL active fields, not just the table-flagged
+      // subset — a FORMULA field's dependencies might not themselves be
+      // flagged showInTable, and getComputedFieldValues only resolves a
+      // formula whose dependencies are present in the field set it's
+      // given.
       const allValues = transactionFieldDefs.length ? await getComputedFieldValues(transactionFieldDefs, t.id) : {}
-      for (const col of currencyInvoiceCols) {
-        const v = allValues[col.key]
-        if (typeof v === 'number') totalAmountFromEntries = totalAmountFromEntries.plus(v)
+      for (const def of summaryDefs) {
+        const v = allValues[def.sourceKey]
+        if (typeof v === 'number') summaryTotals.set(def.id, summaryTotals.get(def.id)!.plus(v))
       }
       const displayValues: Record<string, unknown> = {}
       for (const f of tableFieldDefs) displayValues[f.key] = allValues[f.key]
@@ -82,16 +94,11 @@ export default defineEventHandler(async (event) => {
     party: { id: party.id, type: party.type, name: party.name, phone: party.phone, address: party.address, notes: party.notes },
     payables,
     receivables,
-    transactions: party.transactions,
     entries,
     entryFieldDefs: tableFieldDefs.map(f => ({ key: f.key, label: f.label, type: f.type })),
+    summaryFields: summaryDefs.map(d => ({ id: d.id, label: d.label, sourceKey: d.sourceKey, total: toApiNumber(summaryTotals.get(d.id)!) })),
     invoices: party.invoices.map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, totalAmount: toApiNumber(i.totalAmount), createdAt: i.createdAt })),
     summary: {
-      totalAmountFromEntries: toApiNumber(totalAmountFromEntries),
-      totalPayable: toApiNumber(totalPayable),
-      totalReceivable: toApiNumber(totalReceivable),
-      totalPaid: toApiNumber(totalPaid),
-      totalReceived: toApiNumber(totalReceived),
       outstandingPayable,
       outstandingReceivable,
       netPosition: outstandingReceivable - outstandingPayable

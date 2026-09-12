@@ -26,10 +26,11 @@
 </template>
 
 <script setup lang="ts">
-import { Settings2, FileText, Bell, Building2, LogOut, ChevronRight } from '@lucide/vue'
+import { Settings2, FileText, Bell, Building2, LogOut, ChevronRight, Sigma } from '@lucide/vue'
 
 const menuItems = [
   { to: '/settings/fields', label: 'Ledger fields & formulas', description: 'Add, edit and reorder your custom columns', icon: Settings2, tint: 'blue' },
+  { to: '/settings/summary-fields', label: 'Party summary', description: 'Choose which totals show on each party\'s page', icon: Sigma, tint: 'purple' },
   { to: '/invoices', label: 'Invoices', description: 'View and generate party invoices', icon: FileText, tint: 'teal' },
   { to: '/notifications', label: 'Notifications', description: 'In-app alerts and push settings', icon: Bell, tint: 'amber' }
 ]
@@ -54,6 +55,7 @@ async function onLogout() {
 .menu-icon.blue { background: rgba(67, 97, 238, 0.12); color: var(--accent); }
 .menu-icon.teal { background: var(--receivable-100); color: var(--receivable-600); }
 .menu-icon.amber { background: var(--payable-100); color: var(--payable-600); }
+.menu-icon.purple { background: rgba(147, 51, 234, 0.12); color: #9333EA; }
 .row-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .row-main strong { font-size: 14px; }
 .row-main small { color: var(--ink-400); font-size: 12px; }
