@@ -26,6 +26,7 @@ export default defineEventHandler(async (event) => {
     const outstandingReceivable = p.receivables.reduce((sum, rec) => sum.plus(computeReceivableRemaining(rec)), toMoney(0))
     return {
       id: p.id,
+      type: p.type,
       name: p.name,
       phone: p.phone,
       address: p.address,

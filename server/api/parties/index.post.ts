@@ -4,6 +4,7 @@ import { prisma } from '../../utils/prisma'
 import { logAudit } from '../../utils/audit'
 
 const schema = z.object({
+  type: z.enum(['SELLER', 'BUYER']),
   name: z.string().min(1, 'Party/Mill name is required').max(150),
   phone: z.string().min(1, 'Phone number is required').max(30),
   address: z.string().max(300).optional(),

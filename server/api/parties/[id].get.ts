@@ -1,5 +1,6 @@
 import { requireSession } from '../../utils/auth'
 import { prisma } from '../../utils/prisma'
+import { getActiveFields, getComputedFieldValues } from '../../utils/fields'
 import {
   computePayablePaid, computePayableRemaining, computePayableStatus,
   computeReceivableReceived, computeReceivableRemaining, computeReceivableStatus
@@ -48,11 +49,28 @@ export default defineEventHandler(async (event) => {
   const outstandingPayable = payables.reduce((s, p) => s + p.remaining, 0)
   const outstandingReceivable = receivables.reduce((s, r) => s + r.remaining, 0)
 
+  // Entries view (see the invoice preview's stacked-card layout, which
+  // this mirrors): each of this party's ledger transactions shown with
+  // its custom field values, so the Party page can show the same kind of
+  // per-entry breakdown without a wide table.
+  const transactionFieldDefs = await getActiveFields(session.businessId, 'TRANSACTION')
+  const tableFieldDefs = transactionFieldDefs.filter(f => f.showInTable)
+  const entries = await Promise.all(
+    party.transactions.map(async (t) => ({
+      id: t.id,
+      date: t.date,
+      description: t.description,
+      fields: tableFieldDefs.length ? await getComputedFieldValues(tableFieldDefs, t.id) : {}
+    }))
+  )
+
   return {
-    party: { id: party.id, name: party.name, phone: party.phone, address: party.address, notes: party.notes },
+    party: { id: party.id, type: party.type, name: party.name, phone: party.phone, address: party.address, notes: party.notes },
     payables,
     receivables,
     transactions: party.transactions,
+    entries,
+    entryFieldDefs: tableFieldDefs.map(f => ({ key: f.key, label: f.label, type: f.type })),
     invoices: party.invoices.map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, totalAmount: toApiNumber(i.totalAmount), createdAt: i.createdAt })),
     summary: {
       totalPayable: toApiNumber(totalPayable),

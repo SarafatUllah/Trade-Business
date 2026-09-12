@@ -16,6 +16,7 @@
           <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
         <FieldMessage v-if="(touched.party || forceValidate) && !partyId" type="error" message="Select a party" />
+        <small v-if="!parties.length" class="hint">No Buyer-type parties yet — <NuxtLink to="/parties/new">add one</NuxtLink> first (Payables can only be created for parties marked as Buyer).</small>
       </div>
       <div class="field">
         <label>Amount payable<span class="req">*</span></label>
@@ -71,7 +72,12 @@
 import { Wallet, BellRing, Settings2 } from '@lucide/vue'
 const route = useRoute()
 const router = useRouter()
-const { data: parties } = await useFetch('/api/parties')
+const { data: allParties } = await useFetch('/api/parties')
+// A Payable can only be created for a BUYER-type party — a party you buy
+// from is the one you owe money to. Filtering here (rather than only
+// validating on submit) means the mismatch is never even offered as an
+// option in the first place.
+const parties = computed(() => (allParties.value ?? []).filter((p: any) => p.type === 'BUYER'))
 const { data: customFieldsData } = await useFetch('/api/fields', { query: { entity: 'PAYABLE' } })
 const customFields = computed(() => customFieldsData.value ?? [])
 const fieldValues = reactive<Record<string, unknown>>({})
@@ -175,4 +181,6 @@ async function onSubmit() {
   text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600;
 }
 .req { color: var(--overdue-600); margin-left: 2px; }
+.hint { color: var(--ink-400); font-size: 12px; display: block; margin-top: 6px; }
+.hint a { color: var(--focus); font-weight: 600; }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="card form-card">
+  <div class="card full-bleed form-card">
     <div class="form-header">
       <div class="form-icon"><Factory :size="20" :stroke-width="2.2" /></div>
       <div>
@@ -9,6 +9,20 @@
     </div>
 
     <form @submit.prevent="onSubmit">
+      <div class="field">
+        <label>Type<span class="req">*</span></label>
+        <div class="type-toggle">
+          <button type="button" class="type-btn seller" :class="{ active: type === 'SELLER' }" @click="type = 'SELLER'">
+            <strong>Seller</strong>
+            <small>You sell to them — creates Receivables</small>
+          </button>
+          <button type="button" class="type-btn buyer" :class="{ active: type === 'BUYER' }" @click="type = 'BUYER'">
+            <strong>Buyer</strong>
+            <small>You buy from them — creates Payables</small>
+          </button>
+        </div>
+        <small class="hint">If the same mill/person is both, add them twice — once as each type.</small>
+      </div>
       <div class="field">
         <label for="name">Party / Mill name<span class="req">*</span></label>
         <input
@@ -41,6 +55,7 @@
 
 <script setup lang="ts">
 import { Factory } from '@lucide/vue'
+const type = ref<'SELLER' | 'BUYER'>('SELLER')
 const name = ref('')
 const phone = ref('')
 const address = ref('')
@@ -62,7 +77,7 @@ async function onSubmit() {
   try {
     const party = await $fetch('/api/parties', {
       method: 'POST',
-      body: { name: name.value, phone: phone.value, address: address.value || undefined, notes: notes.value || undefined }
+      body: { type: type.value, name: name.value, phone: phone.value, address: address.value || undefined, notes: notes.value || undefined }
     })
     router.push(`/parties/${party.id}`)
   } catch (e: any) {
@@ -86,4 +101,16 @@ async function onSubmit() {
 .form-header p { font-size: 13px; color: var(--ink-400); margin: 2px 0 0; }
 .error { color: var(--overdue-600); font-size: 14px; margin: -6px 0 14px; }
 .req { color: var(--overdue-600); margin-left: 2px; }
+.hint { color: var(--ink-400); font-size: 12px; display: block; margin-top: 6px; }
+
+.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.type-btn {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line); background: white; text-align: left;
+}
+.type-btn strong { font-size: 14px; }
+.type-btn small { font-size: 11px; color: var(--ink-400); line-height: 1.3; }
+.type-btn.seller.active { border-color: var(--receivable-600); background: var(--receivable-100); }
+.type-btn.buyer.active { border-color: var(--payable-600); background: var(--payable-100); }
 </style>

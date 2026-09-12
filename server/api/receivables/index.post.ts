@@ -23,6 +23,9 @@ export default defineEventHandler(async (event) => {
 
   const party = await prisma.party.findFirst({ where: { id: data.partyId, businessId: session.businessId } })
   if (!party) throw createError({ statusCode: 404, statusMessage: 'Party not found' })
+  if (party.type !== 'SELLER') {
+    throw createError({ statusCode: 400, statusMessage: `"${party.name}" is marked as a Buyer — Receivables can only be created for Seller-type parties.` })
+  }
 
   const fieldDefs = await getActiveFields(session.businessId, 'RECEIVABLE')
   const missingRequired = findMissingRequiredFields(fieldDefs, fieldValues)

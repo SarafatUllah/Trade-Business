@@ -16,6 +16,7 @@
           <option v-for="p in parties" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
         <FieldMessage v-if="(touched.party || forceValidate) && !partyId" type="error" message="Select a party" />
+        <small v-if="!parties.length" class="hint">No Seller-type parties yet — <NuxtLink to="/parties/new">add one</NuxtLink> first (Receivables can only be created for parties marked as Seller).</small>
       </div>
       <div class="field">
         <label>Amount receivable<span class="req">*</span></label>
@@ -71,7 +72,10 @@
 import { HandCoins, BellRing, Settings2 } from '@lucide/vue'
 const route = useRoute()
 const router = useRouter()
-const { data: parties } = await useFetch('/api/parties')
+const { data: allParties } = await useFetch('/api/parties')
+// A Receivable can only be created for a SELLER-type party — a party you
+// sell to is the one who owes money to you.
+const parties = computed(() => (allParties.value ?? []).filter((p: any) => p.type === 'SELLER'))
 const { data: customFieldsData } = await useFetch('/api/fields', { query: { entity: 'RECEIVABLE' } })
 const customFields = computed(() => customFieldsData.value ?? [])
 const fieldValues = reactive<Record<string, unknown>>({})
@@ -175,4 +179,6 @@ async function onSubmit() {
   text-align: center; margin-top: 20px; color: var(--focus); font-size: 14px; font-weight: 600;
 }
 .req { color: var(--overdue-600); margin-left: 2px; }
+.hint { color: var(--ink-400); font-size: 12px; display: block; margin-top: 6px; }
+.hint a { color: var(--focus); font-weight: 600; }
 </style>

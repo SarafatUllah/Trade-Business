@@ -95,10 +95,24 @@ model Membership {
 // PARTY / MILL
 // ============================================================
 
+enum PartyType {
+  SELLER // a party you sell TO — generates Receivables, summarized as "Total Received"
+  BUYER  // a party you buy FROM — generates Payables, summarized as "Total Payable"
+}
+
 model Party {
   id         String   @id @default(cuid())
   businessId String
   name       String
+  // A real-world mill/person acting as both a buyer and a seller is
+  // represented as two separate Party records (per explicit business
+  // rule) — never a single record with a dual role, so this stays a
+  // required single value. Defaults to SELLER only so `prisma db push`
+  // can add this column to a table with existing rows without failing;
+  // a one-time backfill (see scripts/backfill-party-type.ts) infers the
+  // correct value for pre-existing parties from their transaction
+  // history, and it's editable per-party afterward regardless.
+  type       PartyType @default(SELLER)
   phone      String?
   address    String?
   notes      String?
